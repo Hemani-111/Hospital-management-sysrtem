@@ -101,9 +101,9 @@ const SignUpPage = () => {
       const authUserId = authData.user?.id;
       if (!authUserId) throw new Error('Failed to create user account.');
 
-      // 2. Insert into the "User" table (quoted in SQL, so Pascal name works, but columns are lower)
+      // 2. Insert into the "users" table
       const { data: userRow, error: userInsertError } = await supabase
-        .from('User')
+        .from('users')
         .insert({
           email: email,
           passwordhash: 'managed_by_supabase_auth',
@@ -255,14 +255,23 @@ const SignUpPage = () => {
 
           <div className="rounded-xl bg-white dark:bg-slate-900 p-8 shadow-xl border border-slate-200 dark:border-slate-800 space-y-6">
 
-            <div className="text-center lg:text-left">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Patient Registration</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Already have an account?{' '}
-                <Link to="/login" className="font-semibold text-primary hover:underline">
-                  Sign in here
-                </Link>
-              </p>
+            <div className="text-left flex items-start gap-4">
+              <button 
+                onClick={() => navigate(-1)} 
+                className="mt-0.5 p-2 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl flex flex-shrink-0 items-center justify-center group"
+                title="Go Back"
+              >
+                <span className="material-symbols-outlined font-black text-[22px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+              </button>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Patient Registration</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Already have an account?{' '}
+                  <Link to="/login" className="font-semibold text-primary hover:underline">
+                    Sign in here
+                  </Link>
+                </p>
+              </div>
             </div>
 
             <StepIndicator />

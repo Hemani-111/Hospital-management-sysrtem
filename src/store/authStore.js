@@ -11,9 +11,19 @@ export const useAuthStore = create(
       
       setSession: (session) => {
         if (session) {
+          // In some edge cases, metadata might come back as a string, though usually it's an object
+          let metadata = session.user.user_metadata;
+          if (typeof metadata === 'string') {
+            try {
+              metadata = JSON.parse(metadata);
+            } catch (e) {
+              console.error('Failed to parse user metadata:', e);
+            }
+          }
+          
           set({ 
             session, 
-            user: session.user.user_metadata, 
+            user: metadata, 
             isAuthenticated: true 
           });
         } else {

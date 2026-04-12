@@ -208,6 +208,12 @@ const LoginPage = () => {
                 Register your account
               </Link>
             </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              Staff member?{' '}
+              <Link to="/staff-register" className="font-semibold text-primary hover:underline">
+                Portal registration
+              </Link>
+            </p>
           </div>
         </div>
       </div>

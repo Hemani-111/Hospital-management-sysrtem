@@ -124,7 +124,10 @@ const CreatePatient = () => {
     <MainLayout title="Create Patient Profile">
       <div className="max-w-5xl mx-auto animate-in fade-in duration-700">
         <header className="mb-8">
-          <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 dark:text-slate-400 mb-2">
+          <nav aria-label="Breadcrumb" className="flex items-center text-sm text-slate-500 dark:text-slate-400 mb-3">
+            <button type="button" onClick={() => window.history.back()} className="mr-3 p-1.5 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-primary cursor-pointer transition-colors group shadow-sm">
+              <span className="material-symbols-outlined text-[18px] font-black group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+            </button>
             <ol className="flex items-center space-x-2">
               <li><span className="hover:text-primary cursor-pointer">Admin</span></li>
               <li><span className="material-symbols-outlined text-sm">chevron_right</span></li>

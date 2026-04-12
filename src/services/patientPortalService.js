@@ -14,7 +14,7 @@ export const patientPortalService = {
 
   getProfileByEmail: async (email) => {
     const { data: userData, error: userError } = await supabase
-      .from('User')
+      .from('users')
       .select('userid')
       .eq('email', email)
       .single();

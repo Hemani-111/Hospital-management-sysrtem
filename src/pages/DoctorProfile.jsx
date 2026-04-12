@@ -29,7 +29,7 @@ const DoctorProfile = () => {
       ...data
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['doctor-profile', userId]);
+      queryClient.invalidateQueries({ queryKey: ['doctor-profile', userEmail] });
       setIsModalOpen(false);
       alert('Profile updated successfully!');
     }
@@ -217,7 +217,9 @@ const DoctorProfile = () => {
 
               <div className="p-10 bg-slate-50 dark:bg-slate-800/50 flex gap-4">
                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-4 border border-slate-200 dark:border-slate-700 rounded-2xl text-[10px] font-black text-slate-500 hover:bg-white transition-all uppercase tracking-widest">Discard</button>
-                 <button type="submit" disabled={updateMutation.isLoading} className="flex-1 px-6 py-4 bg-primary text-white rounded-2xl text-[10px] font-black shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all uppercase tracking-widest active:scale-95 disabled:opacity-50">Commit Changes</button>
+                 <button type="submit" disabled={updateMutation.isPending} className="flex-1 px-6 py-4 bg-primary text-white rounded-2xl text-[10px] font-black shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all uppercase tracking-widest active:scale-95 disabled:opacity-50">
+                    {updateMutation.isPending ? 'Saving...' : 'Commit Changes'}
+                 </button>
               </div>
            </form>
         </div>

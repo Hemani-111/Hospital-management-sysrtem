@@ -9,7 +9,7 @@
 
 CREATE TYPE user_role          AS ENUM ('patient', 'doctor', 'nurse', 'admin');
 CREATE TYPE room_type          AS ENUM ('General', 'Private', 'ICU', 'Emergency');
-CREATE TYPE employee_type      AS ENUM ('Doctor', 'Nurse', 'Admin', 'LabTechnician', 'Pharmacist');
+CREATE TYPE employee_type      AS ENUM ('Doctor', 'Nurse', 'Admin');
 CREATE TYPE shift_type         AS ENUM ('Morning', 'Evening', 'Night');
 CREATE TYPE gender_type        AS ENUM ('Male', 'Female', 'Other');
 CREATE TYPE blood_group        AS ENUM ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-');
@@ -29,7 +29,7 @@ CREATE TYPE payment_method     AS ENUM ('Cash', 'Card', 'Insurance', 'Online');
 -- USER
 -- ======================
 
-CREATE TABLE "User" (
+CREATE TABLE users (
     UserID       SERIAL PRIMARY KEY,
     Email        VARCHAR(100) UNIQUE NOT NULL,
     PasswordHash VARCHAR(255) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE "User" (
     LastLoginOn  TIMESTAMP
 );
 
-CREATE UNIQUE INDEX idx_user_email_lower ON "User"(LOWER(Email));
+CREATE UNIQUE INDEX idx_users_email_lower ON users(LOWER(Email));
 
 
 -- ======================
@@ -73,7 +73,8 @@ CREATE TABLE Room (
 
 CREATE TABLE Employee (
     EmployeeID     SERIAL PRIMARY KEY,
-    UserID         INT UNIQUE NOT NULL REFERENCES "User"(UserID),
+    UserID         INT UNIQUE REFERENCES users(UserID), -- Made Nullable
+    SignupCode     VARCHAR(20),                          -- Added for registration flow
     EmployeeNumber VARCHAR(20) UNIQUE NOT NULL,
     FirstName      VARCHAR(50) NOT NULL,
     LastName       VARCHAR(50) NOT NULL,
@@ -124,7 +125,7 @@ CREATE TABLE Patient (
     PatientID        SERIAL PRIMARY KEY,
     SignupCode       VARCHAR(20),
     IsRegistered     BOOLEAN DEFAULT FALSE,
-    UserID           INT UNIQUE REFERENCES "User"(UserID),
+    UserID           INT UNIQUE REFERENCES users(UserID),
     FirstName        VARCHAR(50) NOT NULL,
     LastName         VARCHAR(50) NOT NULL,
     DateOfBirth      DATE,

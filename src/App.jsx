@@ -6,6 +6,7 @@ import { useAuthStore } from './store/authStore';
 import './App.css';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
+import StaffRegisterPage from './pages/StaffRegisterPage';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 
 // Real Dashboards
@@ -46,7 +47,37 @@ const queryClient = new QueryClient();
 const DashboardRouter = () => {
   const { user } = useAuthStore();
 
-  switch (user?.role) {
+  if (!user?.role) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center space-y-4">
+          <span className="material-symbols-outlined text-6xl text-amber-500 animate-pulse">warning</span>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">Access Restricted</h2>
+          <p className="text-slate-500 text-sm">
+            You have successfully signed in, but your account (<span className="font-bold text-slate-700 dark:text-slate-300 font-mono text-xs">{user?.email || 'authenticated user'}</span>) has not been assigned a role yet.
+          </p>
+          <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-[10px] text-left font-mono text-slate-400 border border-slate-100 dark:border-slate-700">
+             # Run this in SQL Editor:<br/>
+             UPDATE auth.users SET raw_user_meta_data = {'\'{"role":"admin"}\''} WHERE email = '{user?.email || 'your-email'}';
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="w-full py-3 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all uppercase tracking-widest text-xs active:scale-95"
+          >
+            Refresh Dashboard
+          </button>
+          <button 
+            onClick={() => useAuthStore.getState().logout()} 
+            className="w-full text-slate-400 text-xs font-bold hover:text-slate-600 transition-colors py-2"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  switch (user.role) {
     case 'admin':
       return <AdminDashboard />;
     case 'doctor':
@@ -88,6 +119,7 @@ function App() {
             <Routes>
               <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
               <Route path="/signup" element={!isAuthenticated ? <SignUpPage /> : <Navigate to="/dashboard" />} />
+              <Route path="/staff-register" element={!isAuthenticated ? <StaffRegisterPage /> : <Navigate to="/dashboard" />} />
               <Route 
                 path="/dashboard" 
                 element={

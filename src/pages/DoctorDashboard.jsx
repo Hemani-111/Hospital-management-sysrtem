@@ -67,7 +67,9 @@ const DoctorDashboard = () => {
             <span className="material-symbols-outlined text-[180px] md:text-[240px]">shield_with_heart</span>
           </div>
           <div className="relative z-10">
-            <h1 className="text-3xl md:text-5xl font-display font-black mb-2 tracking-tighter">Welcome back, Dr. {profile?.lastname || '...'}.</h1>
+            <h1 className="text-3xl md:text-5xl font-display font-black mb-2 tracking-tighter">
+              Welcome back, {profile?.lastname ? `Dr. ${profile.lastname}.` : 'Doctor.'}
+            </h1>
             <p className="text-sm md:text-xl font-medium opacity-90 max-w-lg leading-relaxed">
               {deptCases?.length || 0} urgent cases pending review in your department. System status is <span className="font-black underline decoration-accent decoration-4 underline-offset-4 tracking-widest uppercase">Optimal</span>.
             </p>
