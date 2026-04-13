@@ -6,7 +6,7 @@ import { assessmentService } from '../services/assessmentService';
 const conditionColors = {
   Critical: 'bg-red-100 text-red-700',
   Moderate: 'bg-orange-100 text-orange-700',
-  Stable:   'bg-green-100 text-green-700',
+  Stable: 'bg-green-100 text-green-700',
 };
 
 const NurseAssessmentHistory = () => {
@@ -51,8 +51,8 @@ const NurseAssessmentHistory = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {[
             { label: 'Total Assessments', value: assessments.length, icon: 'analytics' },
-            { label: 'This Week',          value: thisWeek.length,   icon: 'calendar_today' },
-            { label: 'This Month',         value: thisMonth.length,  icon: 'event_note' },
+            { label: 'This Week', value: thisWeek.length, icon: 'calendar_today' },
+            { label: 'This Month', value: thisMonth.length, icon: 'event_note' },
           ].map(s => (
             <div key={s.label} className="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-800 border border-primary/10 shadow-sm">
               <div className="flex items-center justify-between">
@@ -139,12 +139,12 @@ const NurseAssessmentHistory = () => {
                                 <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Recorded Vitals</h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                                   {[
-                                    { label: 'Temp',        value: a.temperature,  unit: '°C' },
-                                    { label: 'BP Sys',      value: a.systolicbp,   unit: 'mmHg' },
-                                    { label: 'BP Dia',      value: a.diastolicbp,  unit: 'mmHg' },
-                                    { label: 'Heart Rate',  value: a.pulserate,    unit: 'BPM' },
-                                    { label: 'SpO2',        value: a.oxygenlevel,  unit: '%' },
-                                    { label: 'Blood Sugar', value: a.bloodsugar,   unit: 'mg/dL' },
+                                    { label: 'Temp', value: a.temperature, unit: '°C' },
+                                    { label: 'BP Sys', value: a.systolicbp, unit: 'mmHg' },
+                                    { label: 'BP Dia', value: a.diastolicbp, unit: 'mmHg' },
+                                    { label: 'Heart Rate', value: a.pulserate, unit: 'BPM' },
+                                    { label: 'SpO2', value: a.oxygenlevel, unit: '%' },
+                                    { label: 'Blood Sugar', value: a.bloodsugar, unit: 'mg/dL' },
                                   ].map(v => (
                                     <div key={v.label} className="p-4 rounded-xl border border-primary/10 bg-slate-50 dark:bg-slate-900">
                                       <p className="text-xs text-slate-500 mb-1">{v.label}</p>

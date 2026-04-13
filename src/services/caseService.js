@@ -1,84 +1,82 @@
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 export const caseService = {
-  // Fetch case requests with optional filters (e.g. { doctoremployeeid: 5, status: 'Open' })
+  // Get diseases
+  getDiseases: async () => {
+    const response = await api.get('/diseases');
+    return response.data;
+  },
+
+  // Fetch case requests
   getAll: async (filters = {}) => {
-    let query = supabase
-      .from('caserequest')
-      .select('*, patient(firstname, lastname, dateofbirth, gender, bloodgroup), department(name), employee!doctoremployeeid(firstname, lastname)')
-      .order('createdon', { ascending: false });
-    Object.entries(filters).forEach(([key, value]) => {
-      query = query.eq(key, value);
-    });
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+    const response = await api.get('/cases', { params: filters });
+    return response.data;
   },
 
   // Get all cases for a specific patient
   getByPatient: async (patientId) => {
-    const { data, error } = await supabase
-      .from('caserequest')
-      .select(`
-        *,
-        department(name),
-        employee!doctoremployeeid(firstname, lastname, doctorprofile(specialization)),
-        patientassessment(*),
-        diagnosis(*, disease(name)),
-        prescription(*),
-        labreport(*, labtest(testname))
-      `)
-      .eq('patientid', patientId)
-      .order('createdon', { ascending: false });
-    if (error) throw error;
-    return data;
+    const response = await api.get(`/cases/patient/${patientId}`);
+    return response.data;
   },
 
   // Get case details by ID
   getById: async (id) => {
-    const { data, error } = await supabase
-      .from('caserequest')
-      .select('*, patient(*), patientassessment(*), diagnosis(*), prescription(*), labreport(*, labtest(*))')
-      .eq('caserequestid', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.get(`/cases/${id}`);
+    return response.data;
   },
 
   // Update case status
   updateStatus: async (id, statusData) => {
-    const { data, error } = await supabase
-      .from('caserequest')
-      .update(statusData)
-      .eq('caserequestid', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.patch(`/cases/${id}/status`, statusData);
+    return response.data;
   },
 
   // Save/Update Diagnosis
   saveDiagnosis: async (diagnosisData) => {
-    const { data, error } = await supabase
-      .from('diagnosis')
-      .upsert(diagnosisData)
-      .select();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.post('/cases/diagnosis', diagnosisData);
+    return response.data;
   },
 
   // Save/Update Prescription
   savePrescription: async (prescriptionData) => {
-    const { data, error } = await supabase
-      .from('prescription')
-      .upsert(prescriptionData)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.post('/cases/prescription', prescriptionData);
+    return response.data;
+  },
+
+  // Lab Tests
+  getLabCatalog: async () => {
+    const response = await api.get('/lab-tests/catalog');
+    return response.data;
+  },
+
+  getLabQueue: async (filters = {}) => {
+    const response = await api.get('/lab-tests/queue', { params: filters });
+    return response.data;
+  },
+
+  getLabTests: async (caseId) => {
+    const response = await api.get(`/lab-tests/case/${caseId}`);
+    return response.data;
+  },
+
+  orderLabTest: async (testData) => {
+    const response = await api.post('/lab-tests', testData);
+    return response.data;
+  },
+
+  updateLabTest: async (reportId, updateData) => {
+    const response = await api.patch(`/lab-tests/${reportId}`, updateData);
+    return response.data;
+  },
+
+  // Rooms & Admission
+  getAvailableRooms: async () => {
+    const response = await api.get('/rooms/available');
+    return response.data;
+  },
+
+  admitPatient: async (caseId, roomData) => {
+    const response = await api.patch(`/cases/${caseId}/admit`, roomData);
+    return response.data;
   }
 };

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { employeeService } from '../services/employeeService';
 import { caseService } from '../services/caseService';
 
@@ -10,7 +10,8 @@ const DoctorCases = () => {
   const navigate = useNavigate();
   const { session } = useAuthStore();
   const userEmail = session?.user?.email;
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState('Open'); // Default to Open cases
+  const queryClient = useQueryClient();
 
   const { data: profile } = useQuery({
     queryKey: ['doctor-profile', userEmail],
@@ -20,13 +21,32 @@ const DoctorCases = () => {
   const employeeId = profile?.employeeid;
 
   const { data: cases, isLoading } = useQuery({
-    queryKey: ['doctor-cases', profile?.employeeid, filter],
+    queryKey: ['doctor-cases', profile?.employeeid, profile?.departmentid, filter],
     queryFn: () => {
-      const params = { doctoremployeeid: profile.employeeid };
-      if (filter !== 'All') params.status = filter;
+      const params = {};
+      if (filter === 'Open') {
+        params.assigneddeptid = profile.departmentid;
+        params.status = 'Open';
+      } else {
+        params.doctoremployeeid = profile.employeeid;
+        if (filter !== 'All') params.status = filter;
+      }
       return caseService.getAll(params);
     },
-    enabled: !!profile?.employeeid,
+    enabled: !!profile?.employeeid && !!profile?.departmentid,
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: (caseId) => caseService.updateStatus(caseId, { 
+      status: 'Accepted', 
+      doctoremployeeid: profile.employeeid 
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['doctor-cases']);
+      setFilter('Accepted'); // Switch to accepted tab automatically
+      alert('Case accepted successfully!');
+    },
+    onError: (err) => alert(`Error accepting case: ${err.message}`)
   });
 
   const filteredCases = cases || [];
@@ -115,10 +135,23 @@ const DoctorCases = () => {
                            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate">{cs.casesummary}</p>
                         </div>
                      </div>
-                     <div className="px-5 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
-                        <button onClick={() => navigate(`/cases/${cs.caserequestid}`)} className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors">
-                           <span className="material-symbols-outlined text-lg">medical_services</span> View and Treat
-                        </button>
+                     <div className="px-5 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                        {cs.status === 'Open' ? (
+                          <button 
+                            onClick={() => acceptMutation.mutate(cs.caserequestid)} 
+                            disabled={acceptMutation.isPending}
+                            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200 dark:shadow-none disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-lg">check_circle</span> Accept Patient Case
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => navigate(`/cases/${cs.caserequestid}`)} 
+                            className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-lg">medical_services</span> View and Treat
+                          </button>
+                        )}
                      </div>
                   </div>
                ))

@@ -3,23 +3,32 @@ import MainLayout from '../layouts/MainLayout';
 import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { employeeService } from '../services/employeeService';
+import { patientPortalService } from '../services/patientPortalService';
 import { appointmentService } from '../services/appointmentService';
 
 const DoctorAppointments = () => {
   const { session } = useAuthStore();
+  const userRole = session?.user?.role;
   const userEmail = session?.user?.email;
 
+  // 1. Fetch relevant profile based on role
   const { data: profile } = useQuery({
-    queryKey: ['doctor-profile', userEmail],
-    queryFn: () => employeeService.getProfileByEmail(userEmail),
+    queryKey: [userRole === 'patient' ? 'patient-profile' : 'doctor-profile', userEmail],
+    queryFn: () => userRole === 'patient' 
+      ? patientPortalService.getProfileByEmail(userEmail)
+      : employeeService.getProfileByEmail(userEmail),
     enabled: !!userEmail,
   });
-  const employeeId = profile?.employeeid;
 
+  const internalId = userRole === 'patient' ? profile?.patientid : profile?.employeeid;
+
+  // 2. Fetch appointments based on role
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ['doctor-schedule', profile?.employeeid],
-    queryFn: () => appointmentService.getDoctorAppointments(profile.employeeid),
-    enabled: !!profile?.employeeid,
+    queryKey: [userRole === 'patient' ? 'patient-appointments' : 'doctor-schedule', internalId],
+    queryFn: () => userRole === 'patient'
+      ? appointmentService.getPatientAppointments(internalId)
+      : appointmentService.getDoctorAppointments(internalId),
+    enabled: !!internalId,
   });
 
   const appointmentList = appointments || [];
@@ -41,8 +50,14 @@ const DoctorAppointments = () => {
       <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700">
          <div className="flex items-center justify-between">
             <div>
-               <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Upcoming Schedule</h1>
-               <p className="text-slate-500 mt-1">Review your patient consultations for the week.</p>
+               <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                 {userRole === 'patient' ? 'My Appointments' : 'Upcoming Schedule'}
+               </h1>
+               <p className="text-slate-500 mt-1">
+                 {userRole === 'patient' 
+                   ? 'View your upcoming consultations and medical visits.' 
+                   : 'Review your patient consultations for the week.'}
+               </p>
             </div>
             
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
@@ -71,13 +86,22 @@ const DoctorAppointments = () => {
                              <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
                              <div>
                                 <div className="flex items-center gap-2 mb-1">
-                                   <p className="font-bold text-lg text-slate-900 dark:text-slate-100">{item.patient?.firstname} {item.patient?.lastname}</p>
+                                   <p className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                                      {userRole === 'patient' 
+                                        ? `Dr. ${item.doctor?.firstname} ${item.doctor?.lastname}`
+                                        : `${item.patient?.firstname} ${item.patient?.lastname}`}
+                                   </p>
                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                      item.type === 'Inpatient' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                      item.type === 'Inpatient' ? 'bg-blue-100 text-blue-700' : 
+                                      item.type === 'Emergency' ? 'bg-rose-100 text-rose-700' :
+                                      'bg-orange-100 text-orange-700'
                                    }`}>{item.type}</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
-                                   <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">calendar_month</span> {item.appointmentdate}</span>
+                                   <span className="flex items-center gap-1">
+                                      <span className="material-symbols-outlined text-xs">calendar_month</span> 
+                                      {item.appointmentdate ? new Date(item.appointmentdate).toLocaleDateString() : 'N/A'}
+                                   </span>
                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-emerald-500">check_circle</span> {item.status}</span>
                                 </div>
                              </div>

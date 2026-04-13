@@ -1,13 +1,8 @@
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 export const departmentService = {
   getAll: async () => {
-    const { data, error } = await supabase
-      .from('department')
-      .select('*')
-      .order('name', { ascending: true });
-    
-    if (error) throw error;
-    return data;
+    const response = await api.get('/departments');
+    return response.data;
   }
 };

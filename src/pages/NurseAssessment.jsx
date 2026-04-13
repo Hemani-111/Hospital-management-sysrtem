@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { employeeService } from '../services/employeeService';
 import { assessmentService } from '../services/assessmentService';
 import { patientService } from '../services/patientService';
+import { departmentService } from '../services/departmentService';
 
 const NurseAssessment = () => {
   const { session } = useAuthStore();
@@ -18,6 +19,10 @@ const NurseAssessment = () => {
     temperature: '', systolicbp: '', diastolicbp: '',
     pulserate: '', oxygenlevel: '', bloodsugar: '', symptoms: '', notes: ''
   });
+  const [assignedDeptID, setAssignedDeptID] = useState('');
+  const [urgency, setUrgency] = useState('Routine');
+  const [caseSummary, setCaseSummary] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['nurse-profile', userEmail],
@@ -28,7 +33,12 @@ const NurseAssessment = () => {
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['pending-assessments'],
-    queryFn: () => patientService.getAll(),
+    queryFn: () => patientService.getAll({ unassessed: 'true' }),
+  });
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => departmentService.getAll(),
   });
 
   const saveAssessment = useMutation({
@@ -44,27 +54,53 @@ const NurseAssessment = () => {
       oxygenlevel: parseFloat(vitals.oxygenlevel) || null,
       bloodsugar: parseFloat(vitals.bloodsugar) || null,
       notes: vitals.notes,
+      assignedDeptID: assignedDeptID ? parseInt(assignedDeptID) : null,
+      urgency,
+      caseSummary
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['recent-assessments']);
       setStep(1);
       setSelectedPatient(null);
       setVitals({ temperature: '', systolicbp: '', diastolicbp: '', pulserate: '', oxygenlevel: '', bloodsugar: '', symptoms: '', notes: '' });
-      alert('Assessment saved successfully!');
+      setAssignedDeptID('');
+      setUrgency('Routine');
+      setCaseSummary('');
+      setShowSuccess(true);
     },
     onError: (err) => alert(`Error: ${err.message}`),
   });
 
   return (
     <MainLayout title="Assess Patient" hidePadding={true}>
+      {showSuccess && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 max-w-sm w-full rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-10 text-center flex flex-col items-center">
+              <div className="size-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-6">
+                <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-4xl font-black">check_circle</span>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Case Assigned</h3>
+              <p className="text-slate-500 font-medium mb-8">The assessment has been submitted and the patient is waiting for the doctor.</p>
+              <button 
+                onClick={() => setShowSuccess(false)}
+                className="w-full py-4 bg-primary text-white rounded-xl font-black hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+              >
+                Assess Next Patient
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10">
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Assess Patient</h2>
       </header>
 
       <div className="p-8 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Stepper */}
-        <div className="flex items-center gap-12 mb-12 border-b border-slate-100 dark:border-slate-800 pb-6">
-          {[{ n: 1, label: 'Select Patient' }, { n: 2, label: 'Record Vitals' }].map(({ n, label }) => (
+        <div className="flex flex-wrap items-center gap-6 md:gap-12 mb-12 border-b border-slate-100 dark:border-slate-800 pb-6">
+          {[{ n: 1, label: 'Select Patient' }, { n: 2, label: 'Record Vitals' }, { n: 3, label: 'Department Referral' }].map(({ n, label }) => (
             <div key={n} className={`flex items-center gap-3 transition-opacity ${step === n ? 'opacity-100' : 'opacity-40'}`}>
               <div className={`size-10 rounded-full flex items-center justify-center font-black ${step === n ? 'bg-primary text-white shadow-xl shadow-primary/20' : step > n ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>{step > n ? '✓' : n}</div>
               <span className={`font-black text-sm uppercase tracking-widest ${step === n ? 'text-primary' : ''}`}>{label}</span>
@@ -133,7 +169,7 @@ const NurseAssessment = () => {
                     </button>
                   )}
                 </div>
-              ) : (
+              ) : step === 2 ? (
                 <div className="animate-in slide-in-from-right-4 duration-500">
                   <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
                     <div>
@@ -204,18 +240,87 @@ const NurseAssessment = () => {
                   <div className="p-8 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-4">
                     <button onClick={() => setStep(1)} className="px-6 py-3 font-black text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">Back</button>
                     <button
+                      onClick={() => setStep(3)}
+                      disabled={!vitals.symptoms}
+                      className="px-10 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Continue to Referral <span className="material-symbols-outlined font-black">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-in slide-in-from-right-4 duration-500">
+                  <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                    <h3 className="font-black text-xl">Department Referral</h3>
+                    <p className="text-sm font-bold text-primary uppercase">Assign Case to a Specialist</p>
+                  </div>
+
+                  <div className="p-8 space-y-6 min-h-[350px]">
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Department *</label>
+                        <select 
+                          className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary/30 outline-none font-bold text-slate-700 dark:text-slate-200"
+                          value={assignedDeptID}
+                          onChange={(e) => setAssignedDeptID(e.target.value)}
+                        >
+                          <option value="">-- Choose a Department --</option>
+                          {departments.map(dept => (
+                            <option key={dept.departmentid} value={dept.departmentid}>{dept.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Priority / Urgency *</label>
+                         <div className="flex gap-4">
+                           {['Routine', 'Urgent', 'Emergency'].map(level => (
+                              <button 
+                                key={level}
+                                onClick={() => setUrgency(level)}
+                                className={`flex-1 py-3 px-4 rounded-xl text-sm font-black transition-all border-2 ${
+                                  urgency === level 
+                                    ? level === 'Emergency' ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' 
+                                      : level === 'Urgent' ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                      : 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    : 'border-transparent bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                                }`}
+                              >
+                                {level}
+                              </button>
+                           ))}
+                         </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Initial Case Summary</label>
+                        <textarea
+                          rows={2}
+                          className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-primary/30 resize-none font-medium"
+                          placeholder="Brief summary for the doctor..."
+                          value={caseSummary}
+                          onChange={e => setCaseSummary(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-8 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-4">
+                    <button onClick={() => setStep(2)} className="px-6 py-3 font-black text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">Back</button>
+                    <button
                       onClick={() => saveAssessment.mutate()}
-                      disabled={!vitals.symptoms || saveAssessment.isPending}
+                      disabled={!assignedDeptID || saveAssessment.isPending}
                       className="px-10 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {saveAssessment.isPending ? (
                         <span className="animate-spin material-symbols-outlined font-black">progress_activity</span>
                       ) : (
-                        <span className="material-symbols-outlined font-black">save_as</span>
+                        <span className="material-symbols-outlined font-black">send</span>
                       )}
-                      {saveAssessment.isPending ? 'Saving...' : 'Finalize Assessment'}
+                      {saveAssessment.isPending ? 'Sending...' : 'Send to Department'}
                     </button>
                   </div>
+
                 </div>
               )}
             </div>

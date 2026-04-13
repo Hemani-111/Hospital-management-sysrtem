@@ -47,11 +47,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       { id: 'records', label: 'Patient Records', icon: 'folder_shared', path: '/records' },
       { id: 'vitals', label: 'Vitals Monitor', icon: 'monitoring', path: '/vitals' },
       { id: 'cases', label: 'My Cases', icon: 'assignment', path: '/cases' },
-      { id: 'appointments', label: 'Appointments', icon: 'calendar_today', path: '/appointments' },
       { id: 'profile', label: 'My Profile', icon: 'person', path: '/profile' },
     ],
     patient: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
       { id: 'profile', label: 'Profile', icon: 'person', path: '/profile' },
       { id: 'cases', label: 'Cases', icon: 'folder_open', path: '/patient/cases' },
       { id: 'appointments', label: 'Appts', icon: 'calendar_today', path: '/appointments' },

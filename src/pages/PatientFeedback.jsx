@@ -1,18 +1,151 @@
 import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
-import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { patientPortalService } from '../services/patientPortalService';
 import { feedbackService } from '../services/feedbackService';
 
+// --- Star Rating Component ---
+const StarRating = ({ value, onChange, disabled }) => (
+  <div className="flex gap-1.5">
+    {[1, 2, 3, 4, 5].map(star => (
+      <button
+        key={star}
+        type="button"
+        onClick={() => !disabled && onChange(star)}
+        disabled={disabled}
+        className={`material-symbols-outlined text-3xl transition-all duration-150 ${
+          disabled ? 'cursor-default' : 'cursor-pointer hover:scale-110'
+        } ${value >= star ? 'text-yellow-400' : 'text-slate-200 dark:text-slate-700'}`}
+        style={{ fontVariationSettings: value >= star ? "'FILL' 1" : "'FILL' 0" }}
+      >
+        star
+      </button>
+    ))}
+  </div>
+);
+
+// --- Staff Card for rating ---
+const StaffCard = ({ person, role, caseId, patientId, alreadyReviewed, submitMutation }) => {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const isDone = alreadyReviewed || submitted;
+  const avatarSeed = person.lastname;
+  const avatarBg = role === 'Doctor' ? 'b6e3f4' : 'ffd5dc';
+  const badgeColor = role === 'Doctor'
+    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+
+  const handleSubmit = () => {
+    if (!rating) return;
+    submitMutation.mutate(
+      {
+        patientid: patientId,
+        employeeid: person.employeeid,
+        caserequestid: caseId,
+        rating,
+        comment,
+      },
+      { onSuccess: () => setSubmitted(true) }
+    );
+  };
+
+  return (
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border-2 transition-all overflow-hidden ${
+      isDone
+        ? 'border-emerald-200 dark:border-emerald-800/50 opacity-80'
+        : 'border-slate-200 dark:border-slate-800 hover:border-primary/30 hover:shadow-lg'
+    }`}>
+      <div className="p-6 flex items-start gap-5">
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          <div className="size-16 rounded-2xl overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-md">
+            <img
+              className="w-full h-full object-cover"
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}&backgroundColor=${avatarBg}`}
+              alt={role}
+            />
+          </div>
+        </div>
+
+        {/* Info + Rating */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div>
+              <p className="font-black text-slate-900 dark:text-slate-100 text-lg leading-tight">
+                {role === 'Doctor' ? 'Dr.' : ''} {person.firstname} {person.lastname}
+              </p>
+              <span className={`inline-block mt-1 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${badgeColor}`}>
+                {role === 'Doctor' ? (person.doctorprofile?.specialization || 'Physician') : 'Nursing Staff'}
+              </span>
+            </div>
+
+            {isDone && (
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-black text-sm flex-shrink-0 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-xl">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                Reviewed
+              </div>
+            )}
+          </div>
+
+          {isDone ? (
+            <div className="flex items-center gap-1.5">
+              {[1,2,3,4,5].map(s => (
+                <span key={s} className={`material-symbols-outlined text-xl ${rating >= s ? 'text-yellow-400' : 'text-slate-200'}`}
+                  style={{ fontVariationSettings: rating >= s ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+              ))}
+              {comment && <p className="text-xs text-slate-500 ml-2 italic truncate">"{comment}"</p>}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Your Rating</p>
+                <StarRating value={rating} onChange={setRating} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Comments (optional)</p>
+                <textarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  placeholder={`Share your experience with ${role === 'Doctor' ? 'Dr.' : ''} ${person.firstname}...`}
+                  rows={2}
+                  className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all resize-none font-medium"
+                />
+              </div>
+              <button
+                onClick={handleSubmit}
+                disabled={!rating || submitMutation.isPending}
+                className="px-6 py-2.5 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {submitMutation.isPending ? (
+                  <span className="animate-spin material-symbols-outlined text-sm">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-sm">rate_review</span>
+                )}
+                Submit Review
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- Main Page ---
 const PatientFeedback = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { session } = useAuthStore();
   const userEmail = session?.user?.email;
+  const [notification, setNotification] = useState(null);
 
-  const [ratings, setRatings] = useState({}); // { staffId: { rating, comment, caseId } }
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3500);
+  };
 
   const { data: patient } = useQuery({
     queryKey: ['patient-profile', userEmail],
@@ -20,7 +153,7 @@ const PatientFeedback = () => {
     enabled: !!userEmail,
   });
 
-  const { data: staffToRate = [], isLoading: isLoadingStaff } = useQuery({
+  const { data: staffToRate = [], isLoading } = useQuery({
     queryKey: ['staff-to-rate', patient?.patientid],
     queryFn: () => feedbackService.getStaffToRate(patient.patientid),
     enabled: !!patient?.patientid,
@@ -36,212 +169,142 @@ const PatientFeedback = () => {
     mutationFn: (data) => feedbackService.submit(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['patient-existing-feedback']);
-      alert('Thank you! Your feedback has been recorded.');
-    }
+      showNotification('Thank you! Your feedback has been recorded.');
+    },
+    onError: (err) => showNotification(`Failed to submit: ${err.message}`, 'error'),
   });
 
-  const handleRatingChange = (staffId, rating, caseId) => {
-    setRatings(prev => ({
-      ...prev,
-      [staffId]: { ...(prev[staffId] || {}), rating, caseId }
-    }));
-  };
+  const isAlreadyReviewed = (employeeId, caseId) =>
+    existingFeedback.some(f => f.employeeid === employeeId && f.caserequestid === caseId);
 
-  const handleCommentChange = (staffId, comment) => {
-    setRatings(prev => ({
-      ...prev,
-      [staffId]: { ...(prev[staffId] || {}), comment }
-    }));
-  };
-
-  const handleSubmit = (staffId) => {
-    const feedback = ratings[staffId];
-    if (!feedback?.rating) return alert('Please select a rating before submitting.');
-    
-    submitMutation.mutate({
-      patientid: patient.patientid,
-      employeeid: staffId,
-      caserequestid: feedback.caseId,
-      rating: feedback.rating,
-      comment: feedback.comment || ''
-    });
-  };
-
-  const isAlreadyReviewed = (staffId, caseId) => {
-     return existingFeedback.some(f => f.employeeid === staffId && f.caserequestid === caseId);
-  };
+  const reviewedCount = existingFeedback.length;
+  const totalReviewable = staffToRate.reduce((acc, cs) => acc + (cs.employee ? 1 : 0) + (cs.nurse ? 1 : 0), 0);
 
   return (
-    <MainLayout title="Patient Feedback" hidePadding={true}>
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 md:px-10 py-3 bg-white dark:bg-slate-900 sticky top-0 z-10">
-        <div className="flex items-center gap-4 text-primary">
-          <div className="size-8 flex items-center justify-center bg-primary/10 rounded-lg">
-            <span className="material-symbols-outlined text-primary">medical_services</span>
-          </div>
-          <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">HealthConnect</h2>
+    <MainLayout title="Feedback" hidePadding={true}>
+
+      {/* Toast */}
+      {notification && (
+        <div className={`fixed top-6 right-6 z-[999] px-6 py-4 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-3 animate-in slide-in-from-top-4 duration-300 ${
+          notification.type === 'error' ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
+        }`}>
+          <span className="material-symbols-outlined text-lg">
+            {notification.type === 'error' ? 'cancel' : 'check_circle'}
+          </span>
+          {notification.message}
         </div>
+      )}
+
+      {/* Header */}
+      <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <div className="size-9 bg-yellow-400/10 text-yellow-500 rounded-xl flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl">star</span>
+          </div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">Rate Your Care</h2>
+        </div>
+        {totalReviewable > 0 && (
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-500">
+            <span className="text-primary font-black">{reviewedCount}</span>
+            <span>/ {totalReviewable} reviewed</span>
+          </div>
+        )}
       </header>
 
-      <div className="flex-1 flex justify-center py-8 px-4 md:px-0 animate-in fade-in duration-700 bg-background-light dark:bg-slate-950 min-h-[calc(100vh-64px)]">
-        <div className="flex flex-col max-w-[800px] flex-1 gap-8">
-          <div className="flex flex-col gap-2">
-            <div onClick={() => navigate('/patient/dashboard')} className="flex items-center gap-2 text-primary font-bold mb-1 cursor-pointer w-fit hover:opacity-80 transition-opacity">
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
-              <span className="text-sm">Back to Dashboard</span>
-            </div>
-            <h1 className="text-slate-900 dark:text-slate-100 text-3xl font-black leading-tight tracking-tighter">Rate Your Care Experience</h1>
-            <p className="text-slate-600 dark:text-slate-400 text-base font-medium">Your feedback helps us recognize outstanding staff and improve our medical services for everyone.</p>
-          </div>
+      <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-10 animate-in fade-in duration-700">
 
-          <div className="flex flex-col gap-6">
-            <h2 className="text-slate-900 dark:text-slate-100 text-xl font-black flex items-center gap-2 tracking-tight">
-              <span className="material-symbols-outlined text-primary">groups</span>
-              Medical Staff from Recent Visits
-            </h2>
+        {/* Hero */}
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tighter mb-2">
+            Rate Your Experience
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+            Share feedback about the doctors and nurses who cared for you. Your input helps us improve quality of care.
+          </p>
+        </div>
 
-            {isLoadingStaff ? (
-               <div className="text-center py-12 text-slate-400 font-bold">Loading care history...</div>
-            ) : staffToRate.length === 0 ? (
-               <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-                  <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">rate_review</span>
-                  <p className="text-slate-400 font-bold">No resolved cases found to rate yet.</p>
-               </div>
-            ) : (
-               staffToRate.map((caseItem) => {
-                  const doctor = caseItem.employee;
-                  const nurse = caseItem.nurse;
-                  
-                  return (
-                    <React.Fragment key={caseItem.caserequestid}>
-                       {/* Doctor Card */}
-                       {doctor && (
-                         <div className={`bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden shadow-sm transition-all ${isAlreadyReviewed(doctor.employeeid, caseItem.caserequestid) ? 'border-slate-100 grayscale-[0.6] opacity-70' : 'border-slate-200 dark:border-slate-800 hover:shadow-md'}`}>
-                            <div className="p-6 flex flex-col md:flex-row gap-6">
-                               <div className="flex-shrink-0">
-                                 <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden ring-4 ring-primary/5">
-                                   <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${doctor.lastname}&backgroundColor=b6e3f4`} alt="Doctor" />
-                                 </div>
-                               </div>
-                               <div className="flex-1 flex flex-col gap-4">
-                                 <div className="flex justify-between items-start">
-                                    <div className="flex flex-col gap-1">
-                                      <h3 className="text-slate-900 dark:text-slate-100 text-lg font-black">{doctor.firstname} {doctor.lastname}</h3>
-                                      <p className="text-primary font-bold text-xs px-2.5 py-1 bg-primary/10 rounded-full w-fit uppercase tracking-wider">{doctor.doctorprofile?.specialization || 'Physician'}</p>
-                                    </div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">Case #{caseItem.caserequestid}</p>
-                                 </div>
-
-                                 {isAlreadyReviewed(doctor.employeeid, caseItem.caserequestid) ? (
-                                    <div className="flex items-center gap-2 text-green-600 font-black text-sm">
-                                      <span className="material-symbols-outlined">check_circle</span>
-                                      Feedback Submitted
-                                    </div>
-                                 ) : (
-                                    <div className="flex flex-col gap-5">
-                                      <div className="flex flex-col gap-2">
-                                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Rate interaction</p>
-                                        <div className="flex gap-2">
-                                          {[1,2,3,4,5].map(star => (
-                                            <span 
-                                              key={star}
-                                              onClick={() => handleRatingChange(doctor.employeeid, star, caseItem.caserequestid)}
-                                              className={`material-symbols-outlined cursor-pointer transition-all ${ratings[doctor.employeeid]?.rating >= star ? 'text-yellow-400 fill-1' : 'text-slate-200'} hover:scale-110`}
-                                            >star</span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div className="flex flex-col gap-2">
-                                        <textarea 
-                                          className="w-full rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 border focus:border-primary focus:ring-1 focus:ring-primary outline-none p-4 text-sm font-medium" 
-                                          placeholder="Share more details about your experience..." 
-                                          rows="3"
-                                          onChange={(e) => handleCommentChange(doctor.employeeid, e.target.value)}
-                                        ></textarea>
-                                      </div>
-                                      <button 
-                                        disabled={submitMutation.isLoading}
-                                        onClick={() => handleSubmit(doctor.employeeid)}
-                                        className="w-fit px-8 py-3 bg-primary text-white font-black rounded-xl transition-all hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/20 disabled:opacity-50"
-                                      >
-                                        Submit Review
-                                      </button>
-                                    </div>
-                                 )}
-                               </div>
-                            </div>
-                         </div>
-                       )}
-
-                       {/* Nurse Card */}
-                       {nurse && (
-                         <div className={`bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden shadow-sm transition-all ${isAlreadyReviewed(nurse.employeeid, caseItem.caserequestid) ? 'border-slate-100 grayscale-[0.6] opacity-70' : 'border-slate-200 dark:border-slate-800 hover:shadow-md'}`}>
-                            <div className="p-6 flex flex-col md:flex-row gap-6">
-                               <div className="flex-shrink-0">
-                                 <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden ring-4 ring-primary/5">
-                                   <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${nurse.lastname}&backgroundColor=ffd5dc`} alt="Nurse" />
-                                 </div>
-                               </div>
-                               <div className="flex-1 flex flex-col gap-4">
-                                 <div className="flex justify-between items-start">
-                                    <div className="flex flex-col gap-1">
-                                      <h3 className="text-slate-900 dark:text-slate-100 text-lg font-black">{nurse.firstname} {nurse.lastname}</h3>
-                                      <p className="text-slate-500 font-bold text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-full w-fit uppercase tracking-wider">Nursing Staff</p>
-                                    </div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">Case #{caseItem.caserequestid}</p>
-                                 </div>
-
-                                 {isAlreadyReviewed(nurse.employeeid, caseItem.caserequestid) ? (
-                                    <div className="flex items-center gap-2 text-green-600 font-black text-sm">
-                                      <span className="material-symbols-outlined">check_circle</span>
-                                      Feedback Submitted
-                                    </div>
-                                 ) : (
-                                    <div className="flex flex-col gap-5">
-                                      <div className="flex flex-col gap-2">
-                                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Rate care quality</p>
-                                        <div className="flex gap-2">
-                                          {[1,2,3,4,5].map(star => (
-                                            <span 
-                                              key={star}
-                                              onClick={() => handleRatingChange(nurse.employeeid, star, caseItem.caserequestid)}
-                                              className={`material-symbols-outlined cursor-pointer transition-all ${ratings[nurse.employeeid]?.rating >= star ? 'text-yellow-400 fill-1' : 'text-slate-200'} hover:scale-110`}
-                                            >star</span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div className="flex flex-col gap-2">
-                                        <textarea 
-                                          className="w-full rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 border focus:border-primary focus:ring-1 focus:ring-primary outline-none p-4 text-sm font-medium" 
-                                          placeholder="Share more details about your experience..." 
-                                          rows="3"
-                                          onChange={(e) => handleCommentChange(nurse.employeeid, e.target.value)}
-                                        ></textarea>
-                                      </div>
-                                      <button 
-                                        disabled={submitMutation.isLoading}
-                                        onClick={() => handleSubmit(nurse.employeeid)}
-                                        className="w-fit px-8 py-3 bg-primary text-white font-black rounded-xl transition-all hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/20 disabled:opacity-50"
-                                      >
-                                        Submit Review
-                                      </button>
-                                    </div>
-                                 )}
-                               </div>
-                            </div>
-                         </div>
-                       )}
-                    </React.Fragment>
-                  )
-               })
-            )}
-
-            <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-6 border border-primary/10 flex items-start gap-4">
-              <span className="material-symbols-outlined text-primary">info</span>
-              <div className="flex flex-col gap-1">
-                <p className="text-slate-900 dark:text-slate-100 font-black tracking-tight">Privacy Notice</p>
-                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Your ratings are used for internal quality improvement. Individual comments are shared anonymously with medical departments unless you specify otherwise.</p>
+        {/* Progress bar */}
+        {totalReviewable > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex items-center gap-5">
+            <div className="flex-1">
+              <div className="flex justify-between text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                <span>Review Progress</span>
+                <span>{Math.round((reviewedCount / totalReviewable) * 100)}%</span>
+              </div>
+              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-700"
+                  style={{ width: `${(reviewedCount / totalReviewable) * 100}%` }}
+                />
               </div>
             </div>
+            <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary">verified</span>
+            </div>
+          </div>
+        )}
+
+        {/* Staff Cards */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <span className="animate-spin material-symbols-outlined text-4xl text-primary">progress_activity</span>
+          </div>
+        ) : staffToRate.length === 0 ? (
+          <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+            <span className="material-symbols-outlined text-5xl text-slate-300">rate_review</span>
+            <p className="font-black text-slate-500">No staff to rate yet</p>
+            <p className="text-sm text-slate-400 max-w-xs mx-auto">
+              Staff from your accepted or resolved cases will appear here once assigned.
+            </p>
+          </div>
+        ) : (
+          staffToRate.map((caseItem) => (
+            <div key={caseItem.caserequestid} className="space-y-4">
+              {/* Case header */}
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                  <span className="material-symbols-outlined text-sm text-slate-400">folder_open</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Case #{caseItem.caserequestid} • {caseItem.status}
+                  </span>
+                </div>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              </div>
+
+              {caseItem.employee && (
+                <StaffCard
+                  person={caseItem.employee}
+                  role="Doctor"
+                  caseId={caseItem.caserequestid}
+                  patientId={patient?.patientid}
+                  alreadyReviewed={isAlreadyReviewed(caseItem.employee.employeeid, caseItem.caserequestid)}
+                  submitMutation={submitMutation}
+                />
+              )}
+
+              {caseItem.nurse && (
+                <StaffCard
+                  person={caseItem.nurse}
+                  role="Nurse"
+                  caseId={caseItem.caserequestid}
+                  patientId={patient?.patientid}
+                  alreadyReviewed={isAlreadyReviewed(caseItem.nurse.employeeid, caseItem.caserequestid)}
+                  submitMutation={submitMutation}
+                />
+              )}
+            </div>
+          ))
+        )}
+
+        {/* Privacy notice */}
+        <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-5 border border-primary/10 flex items-start gap-4">
+          <span className="material-symbols-outlined text-primary mt-0.5">shield</span>
+          <div>
+            <p className="font-black text-slate-900 dark:text-slate-100 text-sm mb-1">Privacy Notice</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+              Your ratings are used for internal quality improvement only. Comments are shared anonymously with department heads.
+            </p>
           </div>
         </div>
       </div>

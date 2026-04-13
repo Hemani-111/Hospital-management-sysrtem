@@ -22,6 +22,8 @@ import NurseAssessment from './pages/NurseAssessment';
 import NurseAssessmentHistory from './pages/NurseAssessmentHistory';
 import PatientRecords from './pages/PatientRecords';
 import VitalsMonitor from './pages/VitalsMonitor';
+import NurseLabResults from './pages/NurseLabResults';
+import NurseAdmissions from './pages/NurseAdmissions';
 
 // Admin Extracted Pages
 import AssignCase from './pages/AssignCase';
@@ -57,8 +59,8 @@ const DashboardRouter = () => {
             You have successfully signed in, but your account (<span className="font-bold text-slate-700 dark:text-slate-300 font-mono text-xs">{user?.email || 'authenticated user'}</span>) has not been assigned a role yet.
           </p>
           <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl text-[10px] text-left font-mono text-slate-400 border border-slate-100 dark:border-slate-700">
-             # Run this in SQL Editor:<br/>
-             UPDATE auth.users SET raw_user_meta_data = {'\'{"role":"admin"}\''} WHERE email = '{user?.email || 'your-email'}';
+             # Run this in pgAdmin:<br/>
+             UPDATE users SET Role = 'admin' WHERE email = '{user?.email || 'your-email'}';
           </div>
           <button 
             onClick={() => window.location.reload()} 
@@ -92,24 +94,9 @@ const DashboardRouter = () => {
 };
 
 import { useEffect } from 'react';
-import { supabase } from './lib/supabase';
 
 function App() {
-  const { isAuthenticated, setSession } = useAuthStore();
-
-  useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [setSession]);
+  const { isAuthenticated } = useAuthStore();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -153,7 +140,9 @@ function App() {
                 } 
               />
               <Route path="/records" element={<ProtectedRoute allowedRoles={['nurse']}><PatientRecords /></ProtectedRoute>} />
+              <Route path="/lab-results" element={<ProtectedRoute allowedRoles={['nurse']}><NurseLabResults /></ProtectedRoute>} />
               <Route path="/vitals" element={<ProtectedRoute allowedRoles={['nurse']}><VitalsMonitor /></ProtectedRoute>} />
+              <Route path="/nurse-admissions" element={<ProtectedRoute allowedRoles={['nurse']}><NurseAdmissions /></ProtectedRoute>} />
               
               <Route path="/assign_case" element={<ProtectedRoute allowedRoles={['admin']}><AssignCase /></ProtectedRoute>} />
               <Route path="/manage_staff" element={<ProtectedRoute allowedRoles={['admin']}><ManageStaff /></ProtectedRoute>} />

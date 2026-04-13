@@ -189,12 +189,24 @@ const PatientCases = () => {
                   }`}>{c.status}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-sm">
-                    {c.employee?.firstname?.[0]}{c.employee?.lastname?.[0]}
+                  <div className="size-10 rounded-full bg-primary/10 overflow-hidden flex-shrink-0">
+                    {c.doctor ? (
+                      <img
+                        className="w-full h-full object-cover"
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.doctor.lastname}&backgroundColor=b6e3f4`}
+                        alt="Doctor"
+                      />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-primary font-black text-sm">?</span>
+                    )}
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Dr. {c.employee?.firstname} {c.employee?.lastname}</p>
-                    <p className="text-xs text-slate-500">{c.employee?.doctorprofile?.specialization} • {c.department?.name}</p>
+                    <p className="font-semibold text-sm">
+                      {c.doctor ? `Dr. ${c.doctor.firstname} ${c.doctor.lastname}` : 'Unassigned'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {c.doctor?.specialization} • {c.department?.name}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -212,12 +224,26 @@ const PatientCases = () => {
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${selected.urgency === 'Emergency' ? 'bg-red-500' : selected.urgency === 'Urgent' ? 'bg-amber-500' : 'bg-white/20'}`}>{selected.urgency}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <span className="material-symbols-outlined text-3xl">ecg_heart</span>
+                  <div className="size-14 rounded-2xl overflow-hidden ring-2 ring-white/30 shadow-lg flex-shrink-0">
+                    {selected.doctor ? (
+                      <img
+                        className="w-full h-full object-cover"
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selected.doctor.lastname}&backgroundColor=b6e3f4`}
+                        alt="Doctor"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-2xl">person</span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-white/80 font-medium">Primary Physician</p>
-                    <p className="text-lg font-bold">Dr. {selected.employee?.firstname} {selected.employee?.lastname} • {selected.employee?.doctorprofile?.specialization}</p>
+                    <p className="text-lg font-bold">
+                      {selected.doctor
+                        ? `Dr. ${selected.doctor.firstname} ${selected.doctor.lastname}${selected.doctor.specialization ? ' • ' + selected.doctor.specialization : ''}`
+                        : 'Doctor Unassigned'}
+                    </p>
                   </div>
                 </div>
               </div>

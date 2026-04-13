@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
 import { caseService } from '../services/caseService';
 import { employeeService } from '../services/employeeService';
-import { supabase } from '../lib/supabase';
+import { roomService } from '../services/roomService';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -16,22 +16,12 @@ const AdminDashboard = () => {
   const { data: patients } = useQuery({ queryKey: ['patients'], queryFn: () => patientService.getAll() });
   const { data: cases } = useQuery({ queryKey: ['cases'], queryFn: () => caseService.getAll() });
   const { data: staff } = useQuery({ queryKey: ['staff'], queryFn: () => employeeService.getAll() });
-  const { data: rooms } = useQuery({ 
-    queryKey: ['rooms-available'], 
-    queryFn: async () => {
-      try {
-        const { count, error } = await supabase
-          .from('room')
-          .select('*', { count: 'exact', head: true })
-          .eq('isoccupied', false);
-        if (error) throw error;
-        return count || 0;
-      } catch (err) {
-        console.error('Error fetching room count:', err);
-        return 0;
-      }
-    }
+  const { data: roomStats } = useQuery({ 
+    queryKey: ['rooms-stats'], 
+    queryFn: () => roomService.getStats() 
   });
+
+  const rooms = roomStats?.available || 0;
 
   const stats = [
     { title: 'Total Patients', value: patients?.length || '0', icon: 'person', color: 'blue', trend: (patients?.length || 0) > 100 ? '+12%' : 'Active' },

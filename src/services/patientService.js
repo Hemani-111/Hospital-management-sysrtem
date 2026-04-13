@@ -1,93 +1,44 @@
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 export const patientService = {
   // Fetch all patients
-  getAll: async () => {
-    const { data, error } = await supabase
-      .from('patient')
-      .select('*')
-      .order('createdon', { ascending: false });
-    
-    if (error) throw error;
-    return data;
+  getAll: async (params = {}) => {
+    const response = await api.get('/patients', { params });
+    return response.data;
   },
 
   // Get a single patient by ID
   getById: async (id) => {
-    const { data, error } = await supabase
-      .from('patient')
-      .select('*, patientinsurance(*, insurance(*))')
-      .eq('patientid', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.get(`/patients/${id}`);
+    return response.data;
   },
 
-  // Get patient profile by UserID (from auth)
+  // Get patient profile by UserID
   getProfileByUserId: async (userId) => {
-    const { data, error } = await supabase
-      .from('patient')
-      .select('*, patientinsurance(*, insurance(*))')
-      .eq('userid', userId)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.get(`/patients/profile/${userId}`);
+    return response.data;
   },
 
   getProfileByEmail: async (email) => {
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('userid')
-      .eq('email', email)
-      .single();
-    
-    if (userError) throw userError;
-
-    const { data, error } = await supabase
-      .from('patient')
-      .select('*, patientinsurance(*, insurance(*))')
-      .eq('userid', userData.userid)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.get(`/patients/email/${email}`);
+    return response.data;
   },
 
   // Create a new patient
   create: async (patientData) => {
-    const { data, error } = await supabase
-      .from('patient')
-      .insert([patientData])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.post('/patients', patientData);
+    return response.data;
   },
 
   // Update patient info
   update: async (id, patientData) => {
-    const { data, error } = await supabase
-      .from('patient')
-      .update(patientData)
-      .eq('patientid', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    const response = await api.put(`/patients/${id}`, patientData);
+    return response.data;
   },
 
   // Delete patient
   delete: async (id) => {
-    const { error } = await supabase
-      .from('patient')
-      .delete()
-      .eq('patientid', id);
-    
-    if (error) throw error;
+    await api.delete(`/patients/${id}`);
     return true;
   }
 };

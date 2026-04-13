@@ -16,13 +16,28 @@ const ManageRooms = () => {
   const [search, setSearch] = useState('');
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingRoomId, setEditingRoomId] = useState(null);
   const [formData, setFormData] = useState({
     roomnumber: '',
-    roomtype: 'General',
+    type: 'General',
     departmentid: '',
     pricepernight: 500,
     isoccupied: false
   });
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setIsEditing(false);
+    setEditingRoomId(null);
+    setFormData({
+      roomnumber: '',
+      type: 'General',
+      departmentid: '',
+      pricepernight: 500,
+      isoccupied: false
+    });
+  };
 
   const { data: rooms = [], isLoading } = useQuery({
     queryKey: ['rooms'],
@@ -44,15 +59,18 @@ const ManageRooms = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['rooms']);
       queryClient.invalidateQueries(['room-stats']);
-      setIsModalOpen(false);
-      setFormData({
-        roomnumber: '',
-        roomtype: 'General',
-        departmentid: '',
-        pricepernight: 500,
-        isoccupied: false
-      });
+      closeModal();
       alert('Room created successfully!');
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }) => roomService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['rooms']);
+      queryClient.invalidateQueries(['room-stats']);
+      closeModal();
+      alert('Room updated successfully!');
     }
   });
 
@@ -64,12 +82,30 @@ const ManageRooms = () => {
     }));
   };
 
+  const handleEdit = (room) => {
+    setIsEditing(true);
+    setEditingRoomId(room.roomid);
+    setFormData({
+      roomnumber: room.roomnumber,
+      type: room.type,
+      departmentid: room.departmentid,
+      pricepernight: room.pricepernight,
+      isoccupied: room.isoccupied
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.roomnumber || !formData.departmentid) {
        return alert('Please fill in all required fields.');
     }
-    createMutation.mutate(formData);
+    
+    if (isEditing) {
+      editMutation.mutate({ id: editingRoomId, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
   };
 
   const filtered = rooms.filter(r => {
@@ -101,7 +137,17 @@ const ManageRooms = () => {
             />
           </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsEditing(false);
+              setFormData({
+                roomnumber: '',
+                type: 'General',
+                departmentid: '',
+                pricepernight: 500,
+                isoccupied: false
+              });
+              setIsModalOpen(true);
+            }}
             className="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-black flex items-center gap-2 hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
           >
             <span className="material-symbols-outlined text-sm">add</span>
@@ -169,11 +215,11 @@ const ManageRooms = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map((room) => {
-              const cfg = typeConfig[room.roomtype] || typeConfig.General;
+              const cfg = typeConfig[room.type] || typeConfig.General;
               return (
                 <div key={room.roomid} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                   <div className={`h-32 ${cfg.bg} flex items-center justify-center relative`}>
-                    <div className={`absolute top-4 left-4 px-2.5 py-1 bg-white dark:bg-slate-800 rounded-lg text-[10px] font-black ${cfg.color} uppercase tracking-widest shadow-sm`}>{room.roomtype}</div>
+                    <div className={`absolute top-4 left-4 px-2.5 py-1 bg-white dark:bg-slate-800 rounded-lg text-[10px] font-black ${cfg.color} uppercase tracking-widest shadow-sm`}>{room.type}</div>
                     <span className="material-symbols-outlined text-slate-200 dark:text-slate-800 text-6xl">{cfg.icon}</span>
                   </div>
                   <div className="p-6 space-y-4">
@@ -191,9 +237,12 @@ const ManageRooms = () => {
                           <span className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Price / Day</span>
                           <span className="text-lg font-black tracking-tighter text-slate-900 dark:text-slate-100">₹{room.pricepernight}</span>
                        </div>
-                       <button className="size-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-primary/10 hover:text-primary transition-all active:scale-90">
+                        <button 
+                          onClick={() => handleEdit(room)}
+                          className="size-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
+                        >
                           <span className="material-symbols-outlined text-[20px]">edit_note</span>
-                       </button>
+                        </button>
                     </div>
                   </div>
                 </div>
@@ -209,12 +258,16 @@ const ManageRooms = () => {
            <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
               <div className="p-8 border-b border-slate-100 dark:border-slate-800">
                  <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">Register New Unit</h2>
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
+                      {isEditing ? 'Update Infrastructure' : 'Register New Unit'}
+                    </h2>
+                    <button type="button" onClick={closeModal} className="text-slate-400 hover:text-slate-600 transition-colors">
                        <span className="material-symbols-outlined">close</span>
                     </button>
                  </div>
-                 <p className="text-slate-500 font-medium text-sm">Expand the hospital capacity by adding a new operational room.</p>
+                 <p className="text-slate-500 font-medium text-sm">
+                   {isEditing ? `Modifying settings for ${formData.roomnumber}.` : 'Expand the hospital capacity by adding a new operational room.'}
+                 </p>
               </div>
 
               <div className="p-8 space-y-6">
@@ -233,9 +286,9 @@ const ManageRooms = () => {
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Room Class</label>
                        <select 
-                        name="roomtype"
+                        name="type"
                         className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none" 
-                        value={formData.roomtype}
+                        value={formData.type}
                         onChange={handleInputChange}
                        >
                           <option value="General">General Ward</option>
@@ -274,9 +327,25 @@ const ManageRooms = () => {
                  </div>
               </div>
 
+              <div className="px-8 pb-4">
+                 <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                    <input 
+                      type="checkbox"
+                      name="isoccupied"
+                      id="isoccupied"
+                      className="size-5 rounded border-slate-300 text-primary focus:ring-primary"
+                      checked={formData.isoccupied}
+                      onChange={handleInputChange}
+                    />
+                    <label htmlFor="isoccupied" className="text-xs font-bold text-primary uppercase tracking-widest cursor-pointer">Mark as Occupied</label>
+                 </div>
+              </div>
+
               <div className="p-8 bg-slate-50 dark:bg-slate-800/50 flex gap-4">
-                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-500 hover:bg-white transition-all uppercase tracking-widest">Cancel</button>
-                 <button type="submit" disabled={createMutation.isLoading} className="flex-1 px-6 py-3 bg-primary text-white rounded-xl text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all uppercase tracking-widest active:scale-95 disabled:opacity-50">Create Unit</button>
+                 <button type="button" onClick={closeModal} className="flex-1 px-6 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-500 hover:bg-white transition-all uppercase tracking-widest">Cancel</button>
+                 <button type="submit" disabled={createMutation.isLoading || editMutation.isLoading} className="flex-1 px-6 py-3 bg-primary text-white rounded-xl text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all uppercase tracking-widest active:scale-95 disabled:opacity-50">
+                   {isEditing ? 'Update Unit' : 'Create Unit'}
+                 </button>
               </div>
            </form>
         </div>

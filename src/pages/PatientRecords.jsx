@@ -2,12 +2,31 @@ import React from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
+import { useNavigate } from 'react-router-dom';
+import { caseService } from '../services/caseService';
 
 const PatientRecords = () => {
+  const navigate = useNavigate();
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['patient-records-full'],
     queryFn: () => patientService.getAll(),
   });
+
+  const handleViewEHR = async (patientId) => {
+    try {
+      const cases = await caseService.getByPatient(patientId);
+      if (cases && cases.length > 0) {
+        // Navigate to the most recent case
+        const latestCase = cases[0];
+        navigate(`/cases/${latestCase.caserequestid}`);
+      } else {
+        alert('No active or clinical records found for this patient yet.');
+      }
+    } catch (err) {
+      console.error('Error fetching patient cases:', err);
+      alert('Could not retrieve patient records.');
+    }
+  };
 
   return (
     <MainLayout title="Patient Records" hidePadding={true}>
@@ -82,7 +101,12 @@ const PatientRecords = () => {
                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Joined On</p>
                           </td>
                           <td className="px-8 py-5 text-center">
-                             <button className="px-5 py-2 bg-primary/10 text-primary font-black text-xs uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all transform active:scale-95 shadow-sm group-hover:shadow-md">View EHR</button>
+                             <button 
+                               onClick={() => handleViewEHR(patient.patientid)}
+                               className="px-5 py-2 bg-primary/10 text-primary font-black text-xs uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all transform active:scale-95 shadow-sm group-hover:shadow-md"
+                             >
+                               View EHR
+                             </button>
                           </td>
                        </tr>
                     ))}

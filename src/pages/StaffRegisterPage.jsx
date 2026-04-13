@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
+import { useAuthStore } from '../store/authStore';
 import { employeeService } from '../services/employeeService';
 
 const STEPS = ['verify', 'account', 'success'];
 
 const StaffRegisterPage = () => {
   const navigate = useNavigate();
+  const { setSession } = useAuthStore();
 
   const [step, setStep]                       = useState('verify');
   
@@ -54,7 +56,7 @@ const StaffRegisterPage = () => {
     }
   };
 
-  // ---- STEP 2: Create Supabase Auth account ----
+  // ---- STEP 2: Create local account & link to employee record ----
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     setCreateError(null);
@@ -63,45 +65,20 @@ const StaffRegisterPage = () => {
 
     setCreateLoading(true);
     try {
-      // 1. Create the Supabase Auth user
-      const role = employeeRecord.employeetype.toLowerCase();
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+      // Create the account via our local API
+      // Our API will handle both authentication and linking the employee record
+      const response = await api.post('/auth/register-staff', {
+        email: email.toLowerCase(),
         password,
-        options: {
-          data: {
-            role,
-            first_name: employeeRecord.firstname,
-            last_name: employeeRecord.lastname,
-            employee_id: employeeRecord.employeeid,
-          }
-        }
+        employeeId: employeeRecord.employeeid,
+        role: employeeRecord.employeetype.toLowerCase()
       });
-      if (authError) throw authError;
 
-      // 2. Insert into our "users" table (ensure email is lowercased for consistency)
-      const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .insert({
-          email: email.toLowerCase(),
-          passwordhash: 'managed_by_supabase_auth',
-          role,
-          isactive: true
-        })
-        .select('userid')
-        .single();
-      if (userError) throw userError;
-
-      // 3. Link the employee record to the new user
-      const { error: linkError } = await supabase
-        .from('employee')
-        .update({ userid: userRow.userid })
-        .eq('employeeid', employeeRecord.employeeid);
-      if (linkError) throw linkError;
-
+      // Update the session in authStore
+      setSession(response.data);
       setStep('success');
     } catch (err) {
-      setCreateError(err.message || 'Failed to create account.');
+      setCreateError(err.response?.data?.message || err.message || 'Failed to create account.');
     } finally {
       setCreateLoading(false);
     }

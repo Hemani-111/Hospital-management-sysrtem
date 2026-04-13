@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
+import { useAuthStore } from '../store/authStore';
 
 const STEPS = ['verify', 'account', 'success'];
 
 const SignUpPage = () => {
   const navigate = useNavigate();
+  const { setSession } = useAuthStore();
 
   // Step tracking
   const [step, setStep] = useState('verify'); // 'verify' | 'account' | 'success'
@@ -35,36 +37,18 @@ const SignUpPage = () => {
 
     try {
       const trimmedCode = signupCode.trim().toUpperCase();
-
-      const { data, error } = await supabase
-        .from('patient')
-        .select('patientid, firstname, lastname, signupcode, isregistered, userid')
-        .eq('signupcode', trimmedCode)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!data) {
-        setVerifyError('Invalid signup code. Please check with your hospital administrator.');
-        return;
-      }
-
-      if (data.isregistered || data.userid) {
-        setVerifyError('This signup code has already been used. Please log in instead.');
-        return;
-      }
-
-      setPatientRecord(data);
+      const response = await api.get(`/patients/verify-code/${trimmedCode}`);
+      setPatientRecord(response.data);
       setStep('account');
     } catch (err) {
-      setVerifyError(err.message || 'Failed to verify signup code.');
+      setVerifyError(err.response?.data?.message || 'Failed to verify signup code.');
     } finally {
       setVerifyLoading(false);
     }
   };
 
   // ------------------------------------------------------------------
-  // Step 2: Create Supabase Auth account & link to patient record
+  // Step 2: Create local account & link to patient record
   // ------------------------------------------------------------------
   const handleCreateAccount = async (e) => {
     e.preventDefault();
@@ -82,53 +66,19 @@ const SignUpPage = () => {
     setCreateLoading(true);
 
     try {
-      // 1. Create the Supabase auth user with role metadata
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Create the patient user account
+      // This will handle the users table insert and patient table update
+      const response = await api.post('/auth/register-patient', {
         email,
         password,
-        options: {
-          data: {
-            role: 'patient',
-            first_name: patientRecord.firstname,
-            last_name: patientRecord.lastname,
-            patient_id: patientRecord.patientid,
-          },
-        },
+        patientId: patientRecord.patientid
       });
 
-      if (authError) throw authError;
-
-      const authUserId = authData.user?.id;
-      if (!authUserId) throw new Error('Failed to create user account.');
-
-      // 2. Insert into the "users" table
-      const { data: userRow, error: userInsertError } = await supabase
-        .from('users')
-        .insert({
-          email: email,
-          passwordhash: 'managed_by_supabase_auth',
-          role: 'patient',
-          isactive: true,
-        })
-        .select('userid')
-        .single();
-
-      if (userInsertError) throw userInsertError;
-
-      // 3. Link the patient record to the new user
-      const { error: updateError } = await supabase
-        .from('patient')
-        .update({
-          userid: userRow.userid,
-          isregistered: true,
-        })
-        .eq('patientid', patientRecord.patientid);
-
-      if (updateError) throw updateError;
-
+      // Update the local session
+      setSession(response.data);
       setStep('success');
     } catch (err) {
-      setCreateError(err.message || 'Failed to create account.');
+      setCreateError(err.response?.data?.message || 'Failed to create account.');
     } finally {
       setCreateLoading(false);
     }

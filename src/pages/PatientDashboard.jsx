@@ -42,7 +42,7 @@ const PatientDashboard = () => {
   const pendingAmount = pendingBills.reduce((s, b) => s + parseFloat(b.totalamount || 0), 0);
 
   const accountStats = [
-    { title: 'Appointments', value: String(upcomingAppts.length), icon: 'event',          color: 'blue',   trend: upcomingAppts[0]?.appointmentdate || 'None' },
+    { title: 'Appointments', value: String(upcomingAppts.length), icon: 'event',          color: 'blue',   trend: upcomingAppts[0]?.appointmentdate || 'None', path: '/appointments' },
     { title: 'Active Cases', value: String(activeCases.length),  icon: 'clinical_notes',  color: 'purple', trend: 'Ongoing' },
     { title: 'Pending Bills',value: `₹${pendingAmount.toLocaleString()}`, icon: 'payments', color: 'yellow', trend: 'Pay Now' },
   ];

@@ -1,49 +1,49 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 export const useAuthStore = create(
   persist(
     (set) => ({
       user: null,
-      session: null,
+      token: null,
+      session: null, // Unified session object for component compatibility
       isAuthenticated: false,
       
-      setSession: (session) => {
-        if (session) {
-          // In some edge cases, metadata might come back as a string, though usually it's an object
-          let metadata = session.user.user_metadata;
-          if (typeof metadata === 'string') {
-            try {
-              metadata = JSON.parse(metadata);
-            } catch (e) {
-              console.error('Failed to parse user metadata:', e);
-            }
-          }
-          
+      setSession: (data) => {
+        if (data && data.token) {
           set({ 
-            session, 
-            user: metadata, 
+            token: data.token, 
+            user: data.user, 
+            session: { user: data.user },
             isAuthenticated: true 
           });
         } else {
-          set({ user: null, session: null, isAuthenticated: false });
+          set({ user: null, token: null, session: null, isAuthenticated: false });
         }
       },
 
       login: async (email, password) => {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        if (error) throw error;
-        // The metadata will be update via the auth listener in App.jsx or here
-        return data;
+        try {
+          const response = await api.post('/auth/login', { email, password });
+          const { token, user } = response.data;
+          
+          set({ 
+            token, 
+            user, 
+            session: { user },
+            isAuthenticated: true 
+          });
+          
+          return response.data;
+        } catch (error) {
+          const message = error.response?.data?.message || 'Login failed';
+          throw new Error(message);
+        }
       },
 
       logout: async () => {
-        await supabase.auth.signOut();
-        set({ user: null, session: null, isAuthenticated: false });
+        set({ user: null, token: null, session: null, isAuthenticated: false });
       },
     }),
     {

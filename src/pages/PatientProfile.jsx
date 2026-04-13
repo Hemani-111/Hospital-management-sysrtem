@@ -3,9 +3,12 @@ import MainLayout from '../layouts/MainLayout';
 import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
+import { appointmentService } from '../services/appointmentService';
+import { useNavigate } from 'react-router-dom';
 
 const PatientProfile = () => {
   const { session } = useAuthStore();
+  const navigate = useNavigate();
   const userEmail = session?.user?.email;
 
   const { data: profile, isLoading, error } = useQuery({
@@ -14,6 +17,14 @@ const PatientProfile = () => {
     enabled: !!userEmail,
   });
   const patientId = profile?.patientid;
+
+  const { data: appointments = [] } = useQuery({
+    queryKey: ['patient-appointments', patientId],
+    queryFn: () => appointmentService.getPatientAppointments(patientId),
+    enabled: !!patientId,
+  });
+
+  const nextAppt = appointments.find(a => a.status === 'Scheduled' || a.status === 'Confirmed');
 
   if (isLoading) {
     return (
@@ -138,6 +149,31 @@ const PatientProfile = () => {
                       </div>
                    </section>
 
+                   <section>
+                      <div className="flex items-center justify-between mb-6 border-b border-slate-50 dark:border-slate-800 pb-3">
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Upcoming Appointments</h3>
+                        <button onClick={() => navigate('/appointments')} className="text-primary text-[9px] font-black uppercase tracking-widest hover:underline">View All</button>
+                      </div>
+                      {nextAppt ? (
+                        <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10 flex items-center justify-between group hover:bg-primary/10 transition-all cursor-pointer" onClick={() => navigate('/appointments')}>
+                          <div className="flex items-center gap-6">
+                            <div className="size-12 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex flex-col items-center justify-center border border-primary/10">
+                              <span className="text-xs font-black text-primary">{new Date(nextAppt.appointmentdate).getDate()}</span>
+                              <span className="text-[8px] font-black text-slate-400 uppercase">{new Date(nextAppt.appointmentdate).toLocaleString('default', { month: 'short' })}</span>
+                            </div>
+                            <div>
+                              <p className="font-black text-slate-900 dark:text-slate-100">Dr. {nextAppt.doctor?.firstname} {nextAppt.doctor?.lastname}</p>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{nextAppt.starttime} • {nextAppt.doctor?.specialization}</p>
+                            </div>
+                          </div>
+                          <span className="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </div>
+                      ) : (
+                        <div className="py-8 text-center bg-slate-50/50 dark:bg-slate-800/20 rounded-[2rem] border border-slate-100 dark:border-slate-800">
+                          <p className="text-xs font-bold text-slate-400 tracking-wide uppercase italic">No upcoming appointments scheduled</p>
+                        </div>
+                      )}
+                   </section>
                    {profile.patientinsurance && profile.patientinsurance.length > 0 && (
                      <section>
                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 border-b border-slate-50 dark:border-slate-800 pb-3">Active Insurance Plans</h3>
@@ -160,10 +196,10 @@ const PatientProfile = () => {
                         </div>
                      </section>
                    )}
-               </div>
-            </div>
-         </div>
-      </div>
+                </div>
+             </div>
+          </div>
+       </div>
     </MainLayout>
   );
 };

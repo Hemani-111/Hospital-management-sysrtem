@@ -31,12 +31,18 @@ const NurseDashboard = () => {
     queryFn: () => assessmentService.getAll(),
   });
 
+  const { data: labQueue } = useQuery({
+    queryKey: ['lab-queue-dept', profile?.departmentid],
+    queryFn: () => caseService.getLabQueue({ assigneddeptid: profile.departmentid }),
+    enabled: !!profile?.departmentid,
+  });
+
   // Get last 2 assessments for the pending triage section
   const pendingTriageList = (recentAssessments || []).slice(0, 2);
 
   const stats = [
     { title: 'Patients to Assess', value: String(openCases?.length || 0), icon: 'stethoscope', color: 'blue', trend: 'Open Cases' },
-    { title: 'Assessments Done', value: String(recentAssessments?.length || 0), icon: 'monitoring', color: 'purple', trend: 'Total' },
+    { title: 'Pending Labs', value: String(labQueue?.length || 0), icon: 'science', color: 'indigo', trend: 'To Process' },
     { title: 'Dept', value: profile?.department?.name || '...', icon: 'domain', color: 'green', trend: 'Your Ward' },
   ];
 
@@ -84,6 +90,88 @@ const NurseDashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-8">
           {stats.map((s) => <StatCard key={s.title} {...s} />)}
         </div>
+
+        {/* Quick Actions Section */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div 
+            onClick={() => navigate('/assess')}
+            className="group p-8 rounded-[2.5rem] bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden"
+          >
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-9xl">stethoscope</span>
+            </div>
+            <h4 className="text-2xl font-black mb-1">Triage Assessment</h4>
+            <p className="text-white/80 text-sm font-medium">Capture vitals and screen new patients.</p>
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-xl text-xs font-black uppercase tracking-widest">
+              Start Now <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => navigate('/nurse-admissions')}
+            className="group p-8 rounded-[2.5rem] bg-[#1f507a] text-white shadow-xl shadow-[#1f507a]/20 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer relative overflow-hidden"
+          >
+            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-9xl">bed</span>
+            </div>
+            <h4 className="text-2xl font-black mb-1">In-patient Admissions</h4>
+            <p className="text-white/80 text-sm font-medium">Assign rooms and wards to accepted cases.</p>
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-xl text-xs font-black uppercase tracking-widest">
+              Manage Wards <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="glass-morphism rounded-[2.5rem] border border-white/20 dark:border-slate-800/20 shadow-premium overflow-hidden">
+          <div className="p-8 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
+            <h3 className="text-2xl font-display font-black flex items-center gap-3 tracking-tighter">
+              <span className="size-11 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+                <span className="material-symbols-outlined text-2xl">science</span>
+              </span>
+              Pending Lab Tests — Results Needed
+            </h3>
+            <button onClick={() => navigate('/lab-results')} className="text-indigo-600 text-[10px] font-black uppercase tracking-widest bg-indigo-500/5 px-6 py-3 rounded-2xl hover:bg-indigo-500/10 transition-all border border-indigo-500/10">
+              Full Lab Queue
+            </button>
+          </div>
+
+          <div className="p-6 md:p-8 space-y-6">
+            {(labQueue || []).length === 0 ? (
+              <div className="p-10 text-center text-slate-400 font-bold">No pending lab tests for your department.</div>
+            ) : (
+              (labQueue || []).slice(0, 5).map((test) => (
+                <div key={test.reportid} className="flex flex-col md:flex-row md:items-center justify-between p-7 rounded-3xl bg-white/40 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/50 hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-premium group transition-all duration-500 cursor-pointer relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
+                  <div className="flex items-center gap-8 mb-6 md:mb-0">
+                    <div className="size-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 shadow-inner border border-slate-100 dark:border-slate-700 group-hover:scale-105 transition-all duration-500">
+                      <span className="material-symbols-outlined text-2xl text-indigo-500">experiment</span>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-xl tracking-tight text-slate-900 dark:text-slate-100 leading-none mb-2">
+                        {test.firstname} {test.lastname} — <span className="text-indigo-500">{test.testname}</span>
+                      </h4>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">
+                        Report #{test.reportid} • Case #{test.caserequestid}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-6">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Ordered On</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(test.orderedon).toLocaleDateString()}</p>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/cases/${test.caserequestid}`)}
+                      className="flex-1 md:flex-none px-8 py-4 bg-indigo-600 text-white border border-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+                    >
+                      Enter Report Results
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
         <section className="glass-morphism rounded-[2.5rem] border border-white/20 dark:border-slate-800/20 shadow-premium overflow-hidden">
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">

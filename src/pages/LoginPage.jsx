@@ -33,7 +33,7 @@ const LoginPage = () => {
       await login(`${role.toLowerCase()}@hospital.com`, 'password123');
       navigate('/dashboard');
     } catch (err) {
-      setError(`Demo login failed: ${err.message}. Please ensure users exist in Supabase.`);
+      setError(`Demo login failed: ${err.message}. Make sure the server is running and demo users exist in the database.`);
     } finally {
       setLoading(false);
     }

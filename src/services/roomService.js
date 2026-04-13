@@ -1,45 +1,33 @@
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 export const roomService = {
-  // Fetch all rooms with department info
+  // Fetch all rooms
   getAll: async () => {
-    const { data, error } = await supabase
-      .from('room')
-      .select('*, department(name)')
-      .order('roomnumber', { ascending: true });
-    if (error) throw error;
-    return data;
+    const response = await api.get('/rooms');
+    return response.data;
   },
 
   // Get room stats
   getStats: async () => {
-    const { data, error } = await supabase.from('room').select('isoccupied');
-    if (error) throw error;
-    const total = data.length;
-    const occupied = data.filter(r => r.isoccupied).length;
-    return { total, occupied, available: total - occupied };
+    const response = await api.get('/rooms/stats');
+    return response.data;
   },
 
   // Update room occupancy
   updateOccupancy: async (roomId, isOccupied) => {
-    const { data, error } = await supabase
-      .from('room')
-      .update({ isoccupied: isOccupied })
-      .eq('roomid', roomId)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    const response = await api.patch(`/rooms/${roomId}/occupancy`, { isOccupied });
+    return response.data;
   },
 
   // Create a new room
   create: async (roomData) => {
-    const { data, error } = await supabase
-      .from('room')
-      .insert([roomData])
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    const response = await api.post('/rooms', roomData);
+    return response.data;
+  },
+  
+  // Update an existing room
+  update: async (roomId, roomData) => {
+    const response = await api.put(`/rooms/${roomId}`, roomData);
+    return response.data;
   }
 };

@@ -28,7 +28,7 @@ const DoctorDashboard = () => {
 
   const { data: deptCases } = useQuery({
     queryKey: ['dept-cases', profile?.departmentid],
-    queryFn: () => caseService.getAll({ departmentid: profile.departmentid, status: 'Open' }),
+    queryFn: () => caseService.getAll({ assigneddeptid: profile.departmentid, status: 'Open' }),
     enabled: !!profile?.departmentid,
   });
 
