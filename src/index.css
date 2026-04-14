@@ -61,3 +61,115 @@
 @utility text-gradient {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-light;
 }
+
+/* --- HMS PROFESSIONAL PRINT SYSTEM --- */
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  /* Hide all interactive elements and web UI clutter */
+  nav, aside, footer, .sidebar, .navbar, button, .no-print, [role="button"], 
+  .animate-pulse, .rounded-full, .glass-morphism-heavy, .shadow-xl, .material-symbols-outlined {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Force layout to look like a document */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 10pt;
+    line-height: 1.4;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Remove browser headers/footers if possible via page rules */
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  /* Full width main content, remove scrollbars */
+  main, .main-content, .flex-1, .overflow-y-auto {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+    transform: none !important;
+  }
+
+  header, .sticky {
+    position: static !important;
+    border-bottom: 2px solid #eee !important;
+    display: block !important;
+  }
+
+  /* Specific cleaning - hide generic text helpers */
+  .text-xs, .text-slate-400, .uppercase {
+    color: #444 !important;
+  }
+
+  /* Branded Print Header (Official Style) */
+  .print-only {
+    display: block !important;
+    border-bottom: 3px solid #1f507a;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .print-only h1 {
+    font-size: 28pt !important;
+    margin: 0 !important;
+  }
+
+  /* Table Cleanup */
+  table {
+    border: 1px solid #ddd !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    display: table !important;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tr {
+    display: table-row !important;
+    break-inside: avoid !important;
+  }
+  th {
+    background-color: #f8fafc !important;
+    color: #1f507a !important;
+    border-bottom: 2px solid #1f507a !important;
+    padding: 10pt !important;
+    text-align: left !important;
+    display: table-cell !important;
+  }
+  td {
+    padding: 10pt !important;
+    border-bottom: 1px solid #eee !important;
+    display: table-cell !important;
+  }
+}
+
+.print-only { display: none; }
+.no-print { @apply print:hidden; }

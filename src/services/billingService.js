@@ -7,6 +7,18 @@ export const billingService = {
     return response.data;
   },
 
+  // Get unbilled resolved cases
+  getUnbilledCases: async () => {
+    const response = await api.get('/billing/unbilled-cases');
+    return response.data;
+  },
+
+  // Generate a new bill 
+  generateBill: async (caseRequestId) => {
+    const response = await api.post(`/billing/generate/${caseRequestId}`);
+    return response.data;
+  },
+
   // Get bills for a specific patient
   getByPatient: async (patientId) => {
     const response = await api.get(`/billing/patient/${patientId}`);

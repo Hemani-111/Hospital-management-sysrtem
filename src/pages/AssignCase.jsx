@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToastStore } from '../store/toastStore';
 import { caseService } from '../services/caseService';
 import { employeeService } from '../services/employeeService';
 
@@ -18,14 +19,16 @@ const AssignCase = () => {
     queryFn: () => employeeService.getDoctors(),
   });
 
+  const { addToast } = useToastStore();
+
   const assignMutation = useMutation({
     mutationFn: ({ caseId, doctorId }) =>
       caseService.updateStatus(caseId, { doctoremployeeid: doctorId, status: 'Accepted' }),
     onSuccess: () => {
       queryClient.invalidateQueries(['unassigned-cases']);
-      alert('Case assigned successfully!');
+      addToast('Case assigned successfully!', 'success');
     },
-    onError: (err) => alert(`Error: ${err.message}`),
+    onError: (err) => addToast(`Error: ${err.message}`, 'error'),
   });
 
   const unassigned = openCases.filter(c => !c.doctoremployeeid);
@@ -105,7 +108,7 @@ const AssignCase = () => {
                   <button
                     onClick={() => {
                       const doctorId = selections[cs.caserequestid];
-                      if (!doctorId) return alert('Please select a doctor first.');
+                      if (!doctorId) return addToast('Please select a doctor first.', 'error');
                       assignMutation.mutate({ caseId: cs.caserequestid, doctorId: parseInt(doctorId) });
                     }}
                     disabled={!selections[cs.caserequestid] || assignMutation.isPending}

@@ -7,12 +7,23 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const result = await query(`
-      SELECT e.*, d.name as department_name 
+      SELECT e.*, d.name as department_name, dp.specialization, dp.licensenumber, dp.qualification, dp.experienceyears, dp.consultationfee
       FROM employee e 
       LEFT JOIN department d ON e.departmentid = d.departmentid 
+      LEFT JOIN doctorprofile dp ON e.employeeid = dp.employeeid
       ORDER BY e.firstname ASC
     `);
-    res.json(result.rows);
+
+    const formatted = result.rows.map(row => {
+      const { department_name, specialization, licensenumber, qualification, experienceyears, consultationfee, ...emp } = row;
+      return {
+        ...emp,
+        department: { name: department_name },
+        doctorprofile: specialization ? { specialization, licensenumber, qualification, experienceyears, consultationfee } : null
+      };
+    });
+
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -22,13 +33,23 @@ router.get('/', async (req, res) => {
 router.get('/doctors', async (req, res) => {
   try {
     const result = await query(`
-      SELECT e.*, dp.specialization, d.name as department_name 
+      SELECT e.*, d.name as department_name, dp.specialization, dp.licensenumber, dp.qualification, dp.experienceyears, dp.consultationfee
       FROM employee e 
       JOIN doctorprofile dp ON e.employeeid = dp.employeeid 
       LEFT JOIN department d ON e.departmentid = d.departmentid 
       WHERE e.employeetype = 'Doctor'
     `);
-    res.json(result.rows);
+
+    const formatted = result.rows.map(row => {
+      const { department_name, specialization, licensenumber, qualification, experienceyears, consultationfee, ...emp } = row;
+      return {
+        ...emp,
+        department: { name: department_name },
+        doctorprofile: { specialization, licensenumber, qualification, experienceyears, consultationfee }
+      };
+    });
+
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useAuthStore } from '../store/authStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToastStore } from '../store/toastStore';
 import { employeeService } from '../services/employeeService';
 
 const DoctorProfile = () => {
@@ -23,6 +24,8 @@ const DoctorProfile = () => {
   });
   const employeeId = profile?.employeeid;
 
+  const { addToast } = useToastStore();
+
   const updateMutation = useMutation({
     mutationFn: (data) => employeeService.upsertDoctorProfile({
       employeeid: profile.employeeid,
@@ -31,7 +34,7 @@ const DoctorProfile = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['doctor-profile', userEmail] });
       setIsModalOpen(false);
-      alert('Profile updated successfully!');
+      addToast('Profile updated successfully!', 'success');
     }
   });
 

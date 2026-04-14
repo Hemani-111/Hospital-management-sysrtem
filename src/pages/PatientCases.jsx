@@ -3,6 +3,7 @@ import MainLayout from '../layouts/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
+import { useToastStore } from '../store/toastStore';
 import { patientPortalService } from '../services/patientPortalService';
 
 const TABS = ['Overview', 'Diagnosis', 'Prescription', 'Lab Results', 'Billing'];
@@ -10,6 +11,7 @@ const TABS = ['Overview', 'Diagnosis', 'Prescription', 'Lab Results', 'Billing']
 const PatientCases = () => {
   const navigate = useNavigate();
   const { session } = useAuthStore();
+  const { addToast } = useToastStore();
   const userEmail = session?.user?.email;
 
   const [activeTab, setActiveTab] = useState('Overview');
@@ -109,7 +111,7 @@ const PatientCases = () => {
                   <h4 className="font-bold">Low on stock?</h4>
                   <p className="text-sm text-slate-400">Order your refills online from our partner pharmacy.</p>
                 </div>
-                <button onClick={() => alert('Refill Ordered Successfully!')} className="bg-primary hover:bg-primary/90 px-6 py-2.5 rounded-xl font-bold transition-all">Order Refill</button>
+                <button onClick={() => addToast('Refill Ordered Successfully!', 'success')} className="bg-primary hover:bg-primary/90 px-6 py-2.5 rounded-xl font-bold transition-all">Order Refill</button>
               </div>
             </>
           )}

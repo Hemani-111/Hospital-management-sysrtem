@@ -12,7 +12,6 @@ import ProtectedRoute from './components/shared/ProtectedRoute';
 // Real Dashboards
 import AdminDashboard from './pages/AdminDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
-import PatientDashboard from './pages/PatientDashboard';
 import NurseDashboard from './pages/NurseDashboard';
 
 // Feature Pages
@@ -85,7 +84,7 @@ const DashboardRouter = () => {
     case 'doctor':
       return <DoctorDashboard />;
     case 'patient':
-      return <PatientDashboard />;
+      return <Navigate to="/profile" replace />;
     case 'nurse':
       return <NurseDashboard />;
     default:
@@ -94,6 +93,7 @@ const DashboardRouter = () => {
 };
 
 import { useEffect } from 'react';
+import ToastContainer from './components/shared/ToastContainer';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -102,6 +102,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <div className="App">
+          <ToastContainer />
           <Router>
             <Routes>
               <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
@@ -151,7 +152,7 @@ function App() {
 
               {/* Doctor/Nurse specific missing routes */}
               <Route path="/cases" element={<ProtectedRoute allowedRoles={['doctor', 'nurse']}><DoctorCases /></ProtectedRoute>} />
-              <Route path="/cases/:id" element={<ProtectedRoute allowedRoles={['doctor', 'nurse']}><DoctorCaseDetail /></ProtectedRoute>} />
+              <Route path="/cases/:id" element={<ProtectedRoute allowedRoles={['admin', 'doctor', 'nurse']}><DoctorCaseDetail /></ProtectedRoute>} />
               <Route path="/assessment-history" element={<ProtectedRoute allowedRoles={['nurse']}><NurseAssessmentHistory /></ProtectedRoute>} />
               <Route path="/appointments" element={<ProtectedRoute allowedRoles={['doctor', 'patient', 'nurse']}><DoctorAppointments /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'doctor', 'patient', 'nurse']}><UserProfileRouter /></ProtectedRoute>} />

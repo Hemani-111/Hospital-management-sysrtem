@@ -5,6 +5,7 @@ import * as z from 'zod';
 import MainLayout from '../layouts/MainLayout';
 import { patientService } from '../services/patientService';
 import { useAuthStore } from '../store/authStore';
+import { useToastStore } from '../store/toastStore';
 import { useQuery } from '@tanstack/react-query';
 import { employeeService } from '../services/employeeService';
 
@@ -43,6 +44,8 @@ const CreatePatient = () => {
     defaultValues: { gender: 'Male', bloodGroup: 'A+' }
   });
 
+  const { addToast } = useToastStore();
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
@@ -52,7 +55,7 @@ const CreatePatient = () => {
         firstname: data.firstName,
         lastname: data.lastName,
         dateofbirth: data.dob,
-        gender: data.gender,
+        gender: data.gender === 'Prefer not to say' ? 'Other' : data.gender,
         phonenumber: data.phone,
         emergencycontact: data.emergencyContact,
         bloodgroup: data.bloodGroup,
@@ -70,7 +73,7 @@ const CreatePatient = () => {
       setSuccess(true);
       reset();
     } catch (err) {
-      alert(`Error creating patient: ${err.message}`);
+      addToast(`Error creating patient: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }

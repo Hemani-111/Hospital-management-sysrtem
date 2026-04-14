@@ -326,13 +326,29 @@ router.post('/lab-tests', async (req, res) => {
 
 router.patch('/lab-tests/:id', async (req, res) => {
   try {
-    const { testvalue, performedbyid, resultedon } = req.body;
+    const { testvalue, performedbyid } = req.body;
+    const reportId = req.params.id;
+
     const result = await query(
-      'UPDATE labreport SET testvalue = $1, performedbyid = $2, resultedon = $3, status = $4 WHERE reportid = $5 RETURNING *',
-      [testvalue, performedbyid, resultedon, 'Completed', req.params.id]
+      `UPDATE labreport 
+       SET testvalue = $1, performedbyid = $2, resultedon = NOW(), status = 'Resulted'::lab_status 
+       WHERE reportid = $3 RETURNING *`,
+      [testvalue || null, performedbyid || null, reportId]
     );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Lab report not found' });
+    }
+
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error('Server Lab Error:', err);
+    res.status(500).json({ 
+      error: err.message, 
+      sqlState: err.code,
+      detail: 'If this is a constraint error, please check the console or types.' 
+    }); 
+  }
 });
 
 // --- ROOMS & ADMISSION ---
@@ -447,6 +463,22 @@ router.get('/departments', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.get('/departments/stats', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT 
+        d.departmentid, 
+        d.name, 
+        (SELECT COUNT(*) FROM employee e WHERE e.departmentid = d.departmentid) as staff_count,
+        (SELECT COUNT(*) FROM caserequest cr WHERE cr.assigneddeptid = d.departmentid AND cr.status != 'Resolved') as case_count,
+        (SELECT COUNT(*) FROM room r WHERE r.departmentid = d.departmentid) as bed_count
+      FROM department d
+      ORDER BY d.name
+    `);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // --- ROOMS ---
 router.get('/rooms', async (req, res) => {
   try {
@@ -495,16 +527,77 @@ router.put('/rooms/:id', async (req, res) => {
 });
 
 // --- BILLING ---
+
+router.get('/billing/unbilled-cases', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT cr.caserequestid, cr.casesummary, cr.createdon, cr.status, p.firstname, p.lastname
+      FROM caserequest cr
+      JOIN patient p ON cr.patientid = p.patientid
+      LEFT JOIN bill b ON cr.caserequestid = b.caserequestid
+      WHERE cr.status = 'Resolved' AND b.billid IS NULL
+      ORDER BY cr.createdon DESC
+    `);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/billing/generate/:id', async (req, res) => {
+  try {
+    const caseId = req.params.id;
+
+    const result = await query(`SELECT * FROM fn_generate_bill($1)`, [caseId]);
+    
+    // In order to return the full bill object to the frontend, query the bill table
+    const billId = result.rows[0].bill_id;
+    const finalBill = await query('SELECT * FROM bill WHERE billid = $1', [billId]);
+
+    res.status(201).json(finalBill.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/billing', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM bill ORDER BY generatedon DESC');
-    res.json(result.rows);
+    const result = await query(`
+      SELECT b.*, 
+        cr.patientid, cr.casesummary, cr.createdon as case_created_on,
+        p.firstname as patient_firstname, p.lastname as patient_lastname,
+        d.name as dept_name
+      FROM bill b
+      JOIN caserequest cr ON b.caserequestid = cr.caserequestid
+      JOIN patient p ON cr.patientid = p.patientid
+      LEFT JOIN department d ON cr.assigneddeptid = d.departmentid
+      ORDER BY b.generatedon DESC
+    `);
+    
+    // Format for frontend expectation (nested caserequest -> patient)
+    const formatted = result.rows.map(row => ({
+      ...row,
+      caserequest: {
+        caserequestid: row.caserequestid,
+        casesummary: row.casesummary,
+        createdon: row.case_created_on,
+        patient: {
+          patientid: row.patientid,
+          firstname: row.patient_firstname,
+          lastname: row.patient_lastname
+        },
+        department: { name: row.dept_name }
+      }
+    }));
+    res.json(formatted);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/billing/patient/:id', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM bill WHERE patientid = $1', [req.params.id]);
+    const result = await query(`
+      SELECT b.* 
+      FROM bill b
+      JOIN caserequest cr ON b.caserequestid = cr.caserequestid
+      WHERE cr.patientid = $1
+      ORDER BY b.generatedon DESC
+    `, [req.params.id]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -709,7 +802,13 @@ router.get('/portal/cases/:id', async (req, res) => {
 
 router.get('/portal/bills/:id', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM bill WHERE patientid = $1', [req.params.id]);
+    const result = await query(`
+      SELECT b.* 
+      FROM bill b
+      JOIN caserequest cr ON b.caserequestid = cr.caserequestid
+      WHERE cr.patientid = $1
+      ORDER BY b.generatedon DESC
+    `, [req.params.id]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToastStore } from '../store/toastStore';
 import { employeeService } from '../services/employeeService';
 import { departmentService } from '../services/departmentService';
 
@@ -143,7 +144,7 @@ const ManageStaff = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.firstname || !formData.lastname || !formData.departmentid) {
-      return alert('Please fill all required fields (First Name, Last Name, Department).');
+      return addToast('Please fill all required fields (First Name, Last Name, Department).', 'error');
     }
     if (isEditMode) {
       // On edit, don't touch signupcode or userid

@@ -65,7 +65,8 @@ const DoctorCaseDetail = () => {
     const { data: labTests = [] } = useQuery({
       queryKey: ['lab-tests', id],
       queryFn: () => caseService.getLabTests(id),
-      enabled: !!id
+      enabled: !!id,
+      refetchInterval: 2000
     });
 
     const { data: diseases = [] } = useQuery({
@@ -223,13 +224,7 @@ const DoctorCaseDetail = () => {
           <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">Case Details</h2>
         </div>
         <div className="flex flex-1 justify-end gap-8 items-center">
-          <nav className="hidden md:flex items-center gap-9">
-            <span className="text-primary text-sm font-semibold border-b-2 border-primary pb-1 cursor-pointer" onClick={() => navigate('/cases')}>Cases</span>
-            <span className="text-slate-600 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors cursor-pointer">Patients</span>
-            {userRole !== 'nurse' && (
-              <span className="text-slate-600 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/appointments')}>Schedule</span>
-            )}
-          </nav>
+
           {caseDetail?.caserequestid && caseDetail?.status !== 'Resolved' && (
             <button 
               onClick={() => updateCaseStatusMutation.mutate(caseDetail.status === 'Accepted' ? 'InProgress' : 'Resolved')}
@@ -263,7 +258,38 @@ const DoctorCaseDetail = () => {
       )}
       
       <main className="flex flex-col lg:flex-row gap-6 p-6 lg:p-10 max-w-[1440px] mx-auto w-full animate-in fade-in duration-700 min-h-[calc(100vh-64px)]">
-        <aside className="w-full lg:w-[380px] flex flex-col gap-6">
+        
+        {/* Branded Case Report Header (Stays at TOP of PDF) */}
+        <div className="print-only mb-10 w-full">
+          <div className="flex justify-between items-start pb-6 border-b-4 border-primary mb-10">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-black text-primary uppercase tracking-tighter">Hospital System</h1>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.3em]">Official Medical Discharge Summary</p>
+            </div>
+            <div className="text-right space-y-1">
+              <p className="font-black text-lg text-primary">CASE #{id}</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Printed: {new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-12 mb-10">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/10 pb-1">Patient Identification</h4>
+              <p className="text-2xl font-black text-slate-900">{caseDetail?.firstname} {caseDetail?.lastname}</p>
+              <div className="flex gap-6 text-sm">
+                <p><span className="font-bold text-slate-400">Gender:</span> {caseDetail?.gender}</p>
+                <p><span className="font-bold text-slate-400">Blood:</span> {caseDetail?.bloodgroup}</p>
+              </div>
+            </div>
+            <div className="space-y-4 text-right">
+              <h4 className="text-[10px] font-black text-primary uppercase tracking-widest border-b border-primary/10 pb-1">Medical Department</h4>
+              <p className="text-xl font-bold text-slate-900">{caseDetail?.department?.name}</p>
+              <p className="text-sm font-bold text-primary">Dr. {caseDetail?.doctor?.firstname} {caseDetail?.doctor?.lastname}</p>
+            </div>
+          </div>
+        </div>
+
+        <aside className="w-full lg:w-[380px] flex flex-col gap-6 no-print">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-primary/5">
             <div className="flex items-center gap-4 mb-6">
               <div className="size-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl ring-4 ring-primary/5">
@@ -303,60 +329,80 @@ const DoctorCaseDetail = () => {
                 <p className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{assessment?.pulserate || '--'} bpm</p>
               </div>
             </div>
-
-            <h3 className="text-slate-900 dark:text-slate-100 font-bold mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-sm">assignment</span> Case Status
+            
+            <h3 className="text-slate-900 dark:text-slate-100 font-bold mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-sm">assignment</span> Case Timeline
             </h3>
             
             <div className="relative space-y-0">
+              {/* Step 1: Assessment */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="size-6 rounded-full bg-green-500 text-white flex items-center justify-center">
-                    <span className="material-symbols-outlined text-sm flex">check</span>
+                  <div className="size-6 rounded-full bg-green-500 text-white flex items-center justify-center shadow-sm">
+                    <span className="material-symbols-outlined text-xs flex">check</span>
                   </div>
                   <div className="w-0.5 h-10 bg-green-500"></div>
                 </div>
                 <div className="pb-6">
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Assessment</p>
-                  <p className="text-xs text-slate-500">Completed 10:30 AM</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Patient Assessment</p>
+                  <p className="text-xs text-slate-500">{new Date(caseDetail?.createdon).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — Recorded</p>
                 </div>
               </div>
               
+              {/* Step 2: Created */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="size-6 rounded-full bg-green-500 text-white flex items-center justify-center">
-                    <span className="material-symbols-outlined text-sm flex">check</span>
+                  <div className="size-6 rounded-full bg-green-500 text-white flex items-center justify-center shadow-sm">
+                    <span className="material-symbols-outlined text-xs flex">check</span>
                   </div>
                   <div className="w-0.5 h-10 bg-green-500"></div>
                 </div>
                 <div className="pb-6">
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Created</p>
-                  <p className="text-xs text-slate-500">Completed 10:45 AM</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Case Created</p>
+                  <p className="text-xs text-slate-500">{new Date(caseDetail?.createdon).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — Initial Registry</p>
                 </div>
               </div>
 
+              {/* Step 3: Acceptance Status */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="size-6 rounded-full bg-green-500 text-white flex items-center justify-center">
-                    <span className="material-symbols-outlined text-sm flex">check</span>
+                  <div className={`size-6 rounded-full flex items-center justify-center shadow-sm ${
+                    caseDetail?.status !== 'Open' ? 'bg-green-500 text-white' : 'bg-primary text-white animate-pulse'
+                  }`}>
+                    {caseDetail?.status !== 'Open' ? (
+                      <span className="material-symbols-outlined text-xs flex">check</span>
+                    ) : (
+                      <div className="size-2 bg-white rounded-full"></div>
+                    )}
                   </div>
-                  <div className="w-0.5 h-10 bg-primary"></div>
+                  <div className={`w-0.5 h-10 ${caseDetail?.status === 'InProgress' || caseDetail?.status === 'Resolved' ? 'bg-green-500' : 'bg-slate-200'}`}></div>
                 </div>
                 <div className="pb-6">
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Accepted</p>
-                  <p className="text-xs text-slate-500">Completed 11:00 AM</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Doctor Acceptance</p>
+                  <p className="text-xs text-slate-500">
+                    {caseDetail?.status === 'Open' ? 'Awaiting Doctor...' : `Accepted — Status: ${caseDetail?.status}`}
+                  </p>
                 </div>
               </div>
 
+              {/* Step 4: Resolution */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="size-6 rounded-full border-2 border-primary bg-white dark:bg-slate-900 flex items-center justify-center">
-                    <div className="size-2 bg-primary rounded-full animate-pulse"></div>
+                  <div className={`size-6 rounded-full flex items-center justify-center shadow-sm ${
+                    caseDetail?.status === 'Resolved' ? 'bg-green-500 text-white' : 'border-2 border-slate-200 bg-white'
+                  }`}>
+                    {caseDetail?.status === 'Resolved' ? (
+                      <span className="material-symbols-outlined text-xs flex">check_circle</span>
+                    ) : (
+                      <div className="size-2 bg-slate-200 rounded-full"></div>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-primary">In Progress</p>
-                  <p className="text-xs text-primary/70 font-medium">Current Step</p>
+                <div className="pb-6">
+                  <p className={`text-sm font-bold ${caseDetail?.status === 'Resolved' ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}>Case Resolved</p>
+                  <p className="text-xs text-slate-400">
+                    {caseDetail?.status === 'Resolved' ? 'Finalized & Billed' : 'Pending Resolution'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -458,7 +504,7 @@ const DoctorCaseDetail = () => {
                       className="w-full p-3 pl-10 rounded-lg border border-primary/20 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary/50 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                       value={selectedDiseaseId}
                       onChange={(e) => setSelectedDiseaseId(e.target.value)}
-                      disabled={userRole === 'nurse'}
+                      disabled={userRole !== 'doctor'}
                     >
                       <option value="">-- Select Disease --</option>
                       {diseases.map(d => (
@@ -485,13 +531,13 @@ const DoctorCaseDetail = () => {
                     placeholder="Enter detailed diagnosis notes here..." 
                     value={diagnosisNotes}
                     onChange={(e) => setDiagnosisNotes(e.target.value)}
-                    readOnly={userRole === 'nurse'}
+                    readOnly={userRole !== 'doctor'}
                   ></textarea>
                 </div>
 
-                <div className="flex justify-end gap-4 pt-4 border-t border-primary/5">
+                <div className="flex justify-end gap-4 pt-4 border-t border-primary/5 no-print">
                   <button onClick={() => navigate('/cases')} className="px-6 py-2 rounded-lg border border-primary/20 text-primary font-bold hover:bg-primary/5 transition-colors">Discard</button>
-                  {userRole !== 'nurse' && (
+                  {userRole === 'doctor' && (
                     <button 
                       onClick={() => saveDiagnosisMutation.mutate(diagnosisNotes)} 
                       disabled={saveDiagnosisMutation.isPending || !selectedDiseaseId}
@@ -523,7 +569,7 @@ const DoctorCaseDetail = () => {
                     placeholder="E.g., Paracetamol 500mg - 1-0-1 - 5 days..." 
                     value={medicines}
                     onChange={(e) => setMedicines(e.target.value)}
-                    readOnly={userRole === 'nurse'}
+                    readOnly={userRole !== 'doctor'}
                   ></textarea>
                 </div>
 
@@ -534,13 +580,13 @@ const DoctorCaseDetail = () => {
                     placeholder="Any specific advice or diet instructions..." 
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
-                    readOnly={userRole === 'nurse'}
+                    readOnly={userRole !== 'doctor'}
                   ></textarea>
                 </div>
 
-                <div className="flex justify-end gap-4 pt-4 border-t border-primary/5">
+                <div className="flex justify-end gap-4 pt-4 border-t border-primary/5 no-print">
                   <button onClick={() => navigate('/cases')} className="px-6 py-2 rounded-lg border border-primary/20 text-primary font-bold hover:bg-primary/5 transition-colors">Discard</button>
-                  {userRole !== 'nurse' && (
+                  {userRole === 'doctor' && (
                     <button 
                       onClick={() => savePrescriptionMutation.mutate()} 
                       disabled={savePrescriptionMutation.isPending || !medicines}
@@ -609,7 +655,7 @@ const DoctorCaseDetail = () => {
                           <div className="flex items-center gap-6">
                             <div className="flex flex-col items-end gap-1">
                               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Result Value</span>
-                              {userRole === 'nurse' && test.status !== 'Completed' ? (
+                              {userRole === 'nurse' && test.status !== 'Resulted' ? (
                                 <div className="flex gap-2">
                                   <input 
                                     type="text"
@@ -634,7 +680,7 @@ const DoctorCaseDetail = () => {
                             </div>
                             
                             <div className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest ${
-                              test.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                              test.status === 'Resulted' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                             }`}>
                               {test.status}
                             </div>
@@ -690,11 +736,27 @@ const DoctorCaseDetail = () => {
                         )}
                         {admitPatientMutation.isPending ? 'Admitting...' : 'Admit Patient'}
                       </button>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => window.print()}
+                          className="flex items-center gap-2 px-6 py-3 rounded-2xl text-primary hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px] border border-primary/10 no-print"
+                        >
+                          <span className="material-symbols-outlined text-[16px] font-black">download</span> Download Report
+                        </button>
+                        <button 
+                          onClick={() => setIsTreatmentModalOpen(true)}
+                          className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:shadow-lg hover:shadow-primary/20 hover:scale-105 active:scale-95 transition-all no-print"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">medical_services</span>
+                          Quick Actions
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
+
 
 
             {activeTab === 'Appt' && (

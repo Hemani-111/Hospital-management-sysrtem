@@ -35,6 +35,7 @@ const NurseDashboard = () => {
     queryKey: ['lab-queue-dept', profile?.departmentid],
     queryFn: () => caseService.getLabQueue({ assigneddeptid: profile.departmentid }),
     enabled: !!profile?.departmentid,
+    refetchInterval: 2000
   });
 
   // Get last 2 assessments for the pending triage section

@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { caseService } from '../services/caseService';
 import { useAuthStore } from '../store/authStore';
 import { employeeService } from '../services/employeeService';
+import { useToastStore } from '../store/toastStore';
 
 const NurseLabResults = () => {
   const queryClient = useQueryClient();
   const { session } = useAuthStore();
+  const { addToast } = useToastStore();
   const [resultValues, setResultValues] = useState({});
 
   const { data: profile } = useQuery({
@@ -19,6 +21,7 @@ const NurseLabResults = () => {
   const { data: queue = [], isLoading } = useQuery({
     queryKey: ['lab-queue'],
     queryFn: () => caseService.getLabQueue(),
+    refetchInterval: 2000
   });
 
   const updateLabTestMutation = useMutation({
@@ -29,7 +32,10 @@ const NurseLabResults = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['lab-queue']);
-      alert('Lab result saved successfully!');
+      addToast('Lab result saved successfully!', 'success');
+    },
+    onError: (error) => {
+      addToast(error.message || 'Failed to save lab result', 'error');
     }
   });
 

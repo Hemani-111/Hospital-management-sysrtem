@@ -3,6 +3,7 @@ import MainLayout from '../layouts/MainLayout';
 import StatCard from '../components/ui/StatCard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { billingService } from '../services/billingService';
+import { useToastStore } from '../store/toastStore';
 
 const statusColors = {
   Paid:    'bg-green-100 text-green-700',
@@ -13,7 +14,27 @@ const statusColors = {
 
 const BillingManagement = () => {
   const [expandedId, setExpandedId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { addToast } = useToastStore();
+
+  const { data: unbilled = [] } = useQuery({
+    queryKey: ['unbilled-cases'],
+    queryFn: () => billingService.getUnbilledCases(),
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: (caseId) => billingService.generateBill(caseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['all-bills']);
+      queryClient.invalidateQueries(['unbilled-cases']);
+      setIsModalOpen(false);
+      addToast('Bill generated successfully!', 'success');
+    },
+    onError: (err) => addToast(`Error generating bill: ${err.message}`, 'error')
+  });
+
+  const queryClientRef = queryClient;
 
   const { data: bills = [], isLoading } = useQuery({
     queryKey: ['all-bills'],
@@ -40,12 +61,58 @@ const BillingManagement = () => {
   return (
     <MainLayout title="Billing Management">
       <div className="space-y-10 animate-in fade-in duration-700">
-        <header className="mb-8">
+        {/* Branded Print Header for Reports (Stays at TOP of PDF) */}
+        <div className="print-only mb-10">
+          <div className="flex justify-between items-center pb-6 border-b-2 border-primary mb-8">
+            <div>
+              <h1 className="text-3xl font-black text-primary uppercase tracking-tighter">Hospital System</h1>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Administrative Financial Report</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black uppercase tracking-widest">{new Date().toLocaleDateString()}</p>
+              <p className="text-xs text-slate-400 font-bold tracking-widest">Confidential Data — System Export</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-6 mb-10">
+             {billingStats.map(s => (
+               <div key={s.title} className="p-4 border border-slate-100 rounded-xl">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.title}</p>
+                 <p className="text-xl font-black text-slate-900">{s.value}</p>
+               </div>
+             ))}
+          </div>
+        </div>
+
+        <header className="mb-8 no-print">
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Billing Management</h1>
           <p className="text-slate-500 dark:text-slate-400">Manage patient invoices, insurance claims, and payment statuses.</p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-4 no-print">
+          <div onClick={() => setIsModalOpen(true)} className="p-8 bg-primary/10 dark:bg-primary/20 rounded-3xl border border-primary/10 flex items-center gap-6 group hover:border-primary/40 transition-all cursor-pointer">
+            <div className="size-16 rounded-2xl bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/20 group-hover:scale-110 transition-all">
+              <span className="material-symbols-outlined text-3xl font-black">add</span>
+            </div>
+            <div>
+              <h4 className="font-black text-xl text-primary">Generate Final Bill</h4>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Compile lab, room, and consultation charges for resolved cases.</p>
+            </div>
+          </div>
+          <div
+            onClick={() => window.print()} 
+            className="p-8 bg-slate-100 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 flex items-center gap-6 group hover:border-slate-400 transition-all cursor-pointer no-print"
+          >
+            <div className="size-16 rounded-2xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 group-hover:scale-110 transition-all">
+              <span className="material-symbols-outlined text-3xl font-black">file_download</span>
+            </div>
+            <div>
+              <h4 className="font-black text-xl">Export Reports</h4>
+              <p className="text-sm font-medium text-slate-500">Download current financial metrics in PDF format.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 no-print">
           {billingStats.map((s) => <StatCard key={s.title} {...s} />)}
         </div>
 
@@ -61,7 +128,7 @@ const BillingManagement = () => {
                   <th className="px-8 py-5">Insurance</th>
                   <th className="px-8 py-5">Discount</th>
                   <th className="px-8 py-5">Status</th>
-                  <th className="px-8 py-5"></th>
+                  <th className="px-8 py-5 no-print"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -86,7 +153,7 @@ const BillingManagement = () => {
                             {inv.paymentstatus}
                           </span>
                         </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-8 py-5 text-right no-print">
                           <button
                             onClick={() => setExpandedId(expandedId === inv.billid ? null : inv.billid)}
                             className={`p-2 rounded-xl transition-all ${expandedId === inv.billid ? 'bg-primary text-white rotate-180' : 'text-primary hover:bg-primary/5'}`}
@@ -96,7 +163,7 @@ const BillingManagement = () => {
                         </td>
                       </tr>
                       {expandedId === inv.billid && (
-                        <tr className="bg-slate-50/50 dark:bg-slate-800/20">
+                        <tr className="bg-slate-50/50 dark:bg-slate-800/20 no-print">
                           <td colSpan="8" className="px-12 py-8 animate-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                               <div className="space-y-3">
@@ -142,32 +209,56 @@ const BillingManagement = () => {
               </tbody>
             </table>
           </div>
-          <div className="px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
+          <div className="px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-widest no-print">
             <span>Showing {bills.length} invoice(s)</span>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12">
-          <div className="p-8 bg-primary/10 dark:bg-primary/20 rounded-3xl border border-primary/10 flex items-center gap-6 group hover:border-primary/40 transition-all cursor-pointer">
-            <div className="size-16 rounded-2xl bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/20 group-hover:scale-110 transition-all">
-              <span className="material-symbols-outlined text-3xl font-black">add</span>
+
+      {/* Generate Bill Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Generate Final Bill</h3>
+                <p className="text-sm text-slate-500">Select a resolved case to automatically compile charges.</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <span className="material-symbols-outlined font-black text-slate-500">close</span>
+              </button>
             </div>
-            <div>
-              <h4 className="font-black text-xl text-primary">Generate Invoice</h4>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Create a new custom bill for outpatient or emergency services.</p>
-            </div>
-          </div>
-          <div className="p-8 bg-slate-100 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 flex items-center gap-6 group hover:border-slate-400 transition-all cursor-pointer">
-            <div className="size-16 rounded-2xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 group-hover:scale-110 transition-all">
-              <span className="material-symbols-outlined text-3xl font-black">file_download</span>
-            </div>
-            <div>
-              <h4 className="font-black text-xl">Export Reports</h4>
-              <p className="text-sm font-medium text-slate-500">Download current financial metrics in CSV/Excel formats.</p>
+            <div className="p-8">
+              {unbilled.length === 0 ? (
+                <div className="text-center py-12">
+                  <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-700 mb-4">check_circle</span>
+                  <p className="text-lg font-bold text-slate-500">No cases waiting to be billed.</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+                  {unbilled.map(c => (
+                    <div key={c.caserequestid} className="p-6 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                      <div>
+                        <p className="font-black text-slate-900 dark:text-white text-lg">{c.firstname} {c.lastname}</p>
+                        <p className="text-sm text-slate-500 font-bold mb-2">CAS-{c.caserequestid} • {new Date(c.createdon).toLocaleDateString()}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-1 max-w-sm">{c.casesummary}</p>
+                      </div>
+                      <button
+                        onClick={() => generateMutation.mutate(c.caserequestid)}
+                        disabled={generateMutation.isPending}
+                        className="px-6 py-3 bg-primary text-white font-black rounded-xl hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        {generateMutation.isPending ? 'Calculating...' : 'Compile Bill'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </MainLayout>
   );
 };

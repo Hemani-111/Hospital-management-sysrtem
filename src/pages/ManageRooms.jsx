@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToastStore } from '../store/toastStore';
 import { roomService } from '../services/roomService';
 import { departmentService } from '../services/departmentService';
 
@@ -60,7 +61,7 @@ const ManageRooms = () => {
       queryClient.invalidateQueries(['rooms']);
       queryClient.invalidateQueries(['room-stats']);
       closeModal();
-      alert('Room created successfully!');
+      addToast('Room created successfully!', 'success');
     }
   });
 
@@ -70,7 +71,7 @@ const ManageRooms = () => {
       queryClient.invalidateQueries(['rooms']);
       queryClient.invalidateQueries(['room-stats']);
       closeModal();
-      alert('Room updated successfully!');
+      addToast('Room updated successfully!', 'success');
     }
   });
 
@@ -98,7 +99,7 @@ const ManageRooms = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.roomnumber || !formData.departmentid) {
-       return alert('Please fill in all required fields.');
+       return addToast('Please fill in all required fields.', 'error');
     }
     
     if (isEditing) {

@@ -6,11 +6,13 @@ import { employeeService } from '../services/employeeService';
 import { assessmentService } from '../services/assessmentService';
 import { patientService } from '../services/patientService';
 import { departmentService } from '../services/departmentService';
+import { useToastStore } from '../store/toastStore';
 
 const NurseAssessment = () => {
   const { session } = useAuthStore();
   const userEmail = session?.user?.email;
   const queryClient = useQueryClient();
+  const { addToast } = useToastStore();
 
   const [step, setStep] = useState(1);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -68,7 +70,7 @@ const NurseAssessment = () => {
       setCaseSummary('');
       setShowSuccess(true);
     },
-    onError: (err) => alert(`Error: ${err.message}`),
+    onError: (err) => addToast(`Error: ${err.message}`, 'error'),
   });
 
   return (

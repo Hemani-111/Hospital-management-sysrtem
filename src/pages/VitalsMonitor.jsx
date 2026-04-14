@@ -2,8 +2,10 @@ import React from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery } from '@tanstack/react-query';
 import { assessmentService } from '../services/assessmentService';
+import { useToastStore } from '../store/toastStore';
 
 const VitalsMonitor = () => {
+  const { addToast } = useToastStore();
   const { data: assessments = [], isLoading } = useQuery({
     queryKey: ['latest-vitals-monitor'],
     queryFn: () => assessmentService.getAll(), // Or a more specific query for latest per patient
@@ -23,7 +25,7 @@ const VitalsMonitor = () => {
             <span className="material-symbols-outlined text-primary">monitor_heart</span> Vitals Monitor
         </h2>
         <div className="flex items-center gap-4">
-          <button onClick={() => alert('Emergency protocols activated!')} className="bg-red-500 text-white px-6 py-2 rounded-xl text-sm font-black shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95">
+          <button onClick={() => addToast('Emergency protocols activated!', 'error')} className="bg-red-500 text-white px-6 py-2 rounded-xl text-sm font-black shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95">
             Emergency Alert
           </button>
         </div>

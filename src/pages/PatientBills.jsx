@@ -2,13 +2,16 @@ import React from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { patientPortalService } from '../services/patientPortalService';
 import { billingService } from '../services/billingService';
+import { useToastStore } from '../store/toastStore';
 
 const PatientBills = () => {
   const navigate = useNavigate();
   const { session } = useAuthStore();
+  const { addToast } = useToastStore();
+  const queryClient = useQueryClient();
   const userEmail = session?.user?.email;
 
   const { data: patient } = useQuery({
@@ -32,9 +35,9 @@ const PatientBills = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       await billingService.updateStatus(billId, 'Paid');
       await refetch();
-      alert('Payment successful! Your record has been updated.');
+      addToast('Payment successful! Your record has been updated.', 'success');
     } catch (err) {
-      alert(`Payment failed: ${err.message}`);
+      addToast(`Payment failed: ${err.message}`, 'error');
     } finally {
       setPayingId(null);
     }
@@ -56,7 +59,7 @@ const PatientBills = () => {
 
   return (
     <MainLayout title="Patient Billing" hidePadding={true}>
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-primary/10 bg-white/80 dark:bg-slate-900/80 px-4 md:px-10 py-3 backdrop-blur-md">
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-primary/10 bg-white/80 dark:bg-slate-900/80 px-4 md:px-10 py-3 backdrop-blur-md no-print">
         <div className="flex items-center gap-4">
           <div className="flex items-center justify-center size-10 rounded-lg bg-primary text-white">
             <span className="material-symbols-outlined">account_balance_wallet</span>
@@ -70,10 +73,30 @@ const PatientBills = () => {
 
       <div className="flex-1 overflow-y-auto bg-background-light dark:bg-slate-950 p-4 md:p-8 animate-in fade-in duration-700 min-h-[calc(100vh-64px)]">
         <div className="max-w-4xl mx-auto space-y-6">
+          
+          {/* Branded Print Header (Stays at TOP of PDF) */}
+          <div className="print-only">
+            <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-primary">
+              <div>
+                <h1 className="text-3xl font-black text-primary uppercase tracking-tighter">Hospital System</h1>
+                <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Billing Statement</p>
+              </div>
+              <div className="text-right">
+                <p className="font-black text-sm uppercase">Date: {new Date().toLocaleDateString()}</p>
+                <p className="text-xs text-slate-500 font-bold">Patient ID: #{patient?.patientid}</p>
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 rounded-xl mb-10">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Patient Details</p>
+              <p className="text-lg font-black text-slate-900">{patient?.firstname} {patient?.lastname}</p>
+              <p className="text-sm font-bold text-slate-500 italic">Electronic billing record verified via SupraBase.</p>
+            </div>
+          </div>
+
 
           {/* Outstanding Banner */}
           {pendingAmount > 0 && (
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-primary p-6 text-white shadow-xl shadow-rose-500/20">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 to-primary p-6 text-white shadow-xl shadow-rose-500/20 no-print">
               <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
@@ -85,7 +108,7 @@ const PatientBills = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => alert('Feature: Selecting all pending bills for bulk payment...')}
+                  onClick={() => addToast('Feature: Selecting all pending bills for bulk payment...', 'success')}
                   className="bg-white text-rose-500 px-8 py-3 rounded-xl font-black hover:bg-slate-50 transition-all shadow-lg active:scale-95"
                 >
                   Pay All Items
@@ -160,7 +183,7 @@ const PatientBills = () => {
                       </div>
                     </div>
 
-                    <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4 border border-primary/10">
+                    <div className="bg-primary/5 dark:bg-primary/10 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4 border border-primary/10 no-print">
                       <div className="size-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg">
                         <span className="material-symbols-outlined font-black">payments</span>
                       </div>
@@ -201,14 +224,16 @@ const PatientBills = () => {
 
           {/* Action Footer */}
           {bills.length > 0 && (
-            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex justify-end gap-4 mt-8">
-              <button
-                onClick={() => alert('Downloading Bill Statement PDF...')}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl text-primary hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px] border border-primary/10"
-              >
-                <span className="material-symbols-outlined text-[16px] font-black">download</span> Download Statement
-              </button>
-            </div>
+            <>
+              <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex justify-end gap-4 mt-8 print:hidden">
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl text-primary hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px] border border-primary/10"
+                >
+                  <span className="material-symbols-outlined text-[16px] font-black">download</span> Download Statement
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

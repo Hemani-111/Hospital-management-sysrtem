@@ -3,6 +3,7 @@ import MainLayout from '../layouts/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToastStore } from '../store/toastStore';
 import { employeeService } from '../services/employeeService';
 import { caseService } from '../services/caseService';
 
@@ -36,6 +37,8 @@ const DoctorCases = () => {
     enabled: !!profile?.employeeid && !!profile?.departmentid,
   });
 
+  const { addToast } = useToastStore();
+
   const acceptMutation = useMutation({
     mutationFn: (caseId) => caseService.updateStatus(caseId, { 
       status: 'Accepted', 
@@ -44,9 +47,9 @@ const DoctorCases = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['doctor-cases']);
       setFilter('Accepted'); // Switch to accepted tab automatically
-      alert('Case accepted successfully!');
+      addToast('Case accepted successfully!', 'success');
     },
-    onError: (err) => alert(`Error accepting case: ${err.message}`)
+    onError: (err) => addToast(`Error accepting case: ${err.message}`, 'error')
   });
 
   const filteredCases = cases || [];

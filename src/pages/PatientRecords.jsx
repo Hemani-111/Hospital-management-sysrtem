@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
 import { useNavigate } from 'react-router-dom';
 import { caseService } from '../services/caseService';
+import { useToastStore } from '../store/toastStore';
 
 const PatientRecords = () => {
   const navigate = useNavigate();
@@ -20,11 +21,11 @@ const PatientRecords = () => {
         const latestCase = cases[0];
         navigate(`/cases/${latestCase.caserequestid}`);
       } else {
-        alert('No active or clinical records found for this patient yet.');
+        addToast('No active or clinical records found for this patient yet.', 'error');
       }
     } catch (err) {
       console.error('Error fetching patient cases:', err);
-      alert('Could not retrieve patient records.');
+      addToast('Could not retrieve patient records.', 'error');
     }
   };
 
