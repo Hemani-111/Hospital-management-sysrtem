@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { employeeService } from '../services/employeeService';
+
+const accountSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
 const STEPS = ['verify', 'account', 'success'];
 
@@ -26,11 +37,13 @@ const StaffRegisterPage = () => {
   const [verifyError, setVerifyError]         = useState(null);
 
   const [email, setEmail]                     = useState('');
-  const [password, setPassword]               = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPw, setShowPw]                   = useState(false);
   const [createLoading, setCreateLoading]     = useState(false);
   const [createError, setCreateError]         = useState(null);
+
+  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+    resolver: zodResolver(accountSchema),
+  });
 
   // ---- STEP 1: Verify the employee ID ----
   const handleVerifyID = async (e) => {
@@ -57,24 +70,17 @@ const StaffRegisterPage = () => {
   };
 
   // ---- STEP 2: Create local account & link to employee record ----
-  const handleCreateAccount = async (e) => {
-    e.preventDefault();
+  const onAccountSubmit = async (data) => {
     setCreateError(null);
-    if (password !== confirmPassword) { setCreateError('Passwords do not match.'); return; }
-    if (password.length < 8) { setCreateError('Password must be at least 8 characters.'); return; }
-
     setCreateLoading(true);
     try {
-      // Create the account via our local API
-      // Our API will handle both authentication and linking the employee record
       const response = await api.post('/auth/register-staff', {
-        email: email.toLowerCase(),
-        password,
+        email: data.email.toLowerCase(),
+        password: data.password,
         employeeId: employeeRecord.employeeid,
         role: employeeRecord.employeetype.toLowerCase()
       });
 
-      // Update the session in authStore
       setSession(response.data);
       setStep('success');
     } catch (err) {
@@ -219,7 +225,7 @@ const StaffRegisterPage = () => {
 
             {/* ===== STEP 2: Create Account ===== */}
             {step === 'account' && employeeRecord && (
-              <form onSubmit={handleCreateAccount} className="space-y-5">
+              <form onSubmit={handleSubmit(onAccountSubmit)} className="space-y-5">
                 <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 p-4 flex items-start gap-3">
                   <span className="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
                   <div>
@@ -233,30 +239,43 @@ const StaffRegisterPage = () => {
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Your Email Address</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">mail</span>
-                    <input type="email" className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all"
-                      placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                    <input 
+                      type="email" 
+                      className={`w-full rounded-lg border bg-white py-3 pl-11 pr-4 text-slate-900 focus:ring-2 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all ${errors.email ? 'border-red-400 focus:ring-red-200' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20'}`}
+                      placeholder="you@example.com" 
+                      {...register('email')}
+                    />
                   </div>
+                  {errors.email && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.email.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Set Password</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">lock</span>
-                    <input type={showPw ? 'text' : 'password'} className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-12 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all"
-                      placeholder="Min. 8 characters" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <input 
+                      type={showPw ? 'text' : 'password'} 
+                      className={`w-full rounded-lg border bg-white py-3 pl-11 pr-12 text-slate-900 focus:ring-2 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all ${errors.password ? 'border-red-400 focus:ring-red-200' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20'}`}
+                      placeholder="Min. 8 characters" 
+                      {...register('password')}
+                    />
                     <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       <span className="material-symbols-outlined">{showPw ? 'visibility_off' : 'visibility'}</span>
                     </button>
                   </div>
+                  {errors.password && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.password.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirm Password</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">lock_reset</span>
-                    <input type={showPw ? 'text' : 'password'} className={`w-full rounded-lg border py-3 pl-11 pr-4 text-slate-900 focus:ring-2 outline-none transition-all dark:text-slate-100 dark:bg-slate-800 ${
-                      confirmPassword && password !== confirmPassword ? 'border-red-400 focus:border-red-400 focus:ring-red-200 bg-red-50' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20 bg-white'
-                    }`}
-                      placeholder="Re-enter password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                    <input 
+                      type={showPw ? 'text' : 'password'} 
+                      className={`w-full rounded-lg border py-3 pl-11 pr-4 text-slate-900 focus:ring-2 outline-none transition-all dark:text-slate-100 dark:bg-slate-800 ${errors.confirmPassword ? 'border-red-400 focus:border-red-400 focus:ring-red-200 bg-red-50' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20 bg-white'}`}
+                      placeholder="Re-enter password" 
+                      {...register('confirmPassword')}
+                    />
                   </div>
+                  {errors.confirmPassword && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.confirmPassword.message}</p>}
                 </div>
                 {createError && (
                   <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-xs font-medium text-red-600 border border-red-100">

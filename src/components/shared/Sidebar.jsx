@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../context/ThemeContext';
+import { useQuery } from '@tanstack/react-query';
+import { billingService } from '../../services/billingService';
+import { caseService } from '../../services/caseService';
+import { appointmentService } from '../../services/appointmentService';
+import { employeeService } from '../../services/employeeService';
+import { patientPortalService } from '../../services/patientPortalService';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuthStore();
@@ -17,11 +23,47 @@ const Sidebar = ({ isOpen, onClose }) => {
   const handleLogoutClick = () => setIsLogoutModalOpen(true);
 
   const confirmLogout = () => {
-    setIsLogoutModalOpen(false);
     logout();
   };
 
   const cancelLogout = () => setIsLogoutModalOpen(false);
+
+  // --- STATS FOR BADGES ---
+  const { data: billingData = [] } = useQuery({
+    queryKey: ['sidebar-billing'],
+    queryFn: () => billingService.getAll(),
+    enabled: user?.role === 'admin',
+    refetchInterval: 30000 // Refresh every 30s
+  });
+
+  const { data: casesData = [] } = useQuery({
+    queryKey: ['sidebar-cases'],
+    queryFn: () => caseService.getAll(),
+    enabled: user?.role === 'admin' || user?.role === 'nurse',
+    refetchInterval: 30000
+  });
+
+  const { data: profile } = useQuery({
+    queryKey: ['sidebar-profile', user?.email],
+    queryFn: () => user?.role === 'doctor' ? employeeService.getProfileByEmail(user?.email) : null,
+    enabled: user?.role === 'doctor'
+  });
+
+  const { data: appointmentsData = [] } = useQuery({
+    queryKey: ['sidebar-appointments', profile?.employeeid],
+    queryFn: () => appointmentService.getDoctorAppointments(profile?.employeeid),
+    enabled: !!profile?.employeeid,
+    refetchInterval: 60000
+  });
+
+  const stats = {
+    pendingBills: billingData.filter(b => b.paymentstatus === 'Pending').length,
+    openCases: casesData.filter(c => c.status === 'Open').length,
+    todayAppts: appointmentsData.filter(a => {
+      const today = new Date().toISOString().split('T')[0];
+      return a.appointmentdate === today;
+    }).length
+  };
 
   const navItems = {
     admin: [
@@ -55,6 +97,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       { id: 'appointments', label: 'Appts', icon: 'calendar_today', path: '/appointments' },
       { id: 'billing', label: 'Bills', icon: 'receipt_long', path: '/patient/billing' },
       { id: 'feedback', label: 'Feedback', icon: 'chat_bubble', path: '/feedback' },
+      { id: 'support', label: 'Support', icon: 'support_agent', path: '/support' },
     ],
   };
 
@@ -100,15 +143,27 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
 
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
-            {currentRoleItems.map(item => (
-              <Link key={item.id} to={item.path} onClick={onClose} className={getItemClasses(item.path)}>
-                <span className="material-symbols-outlined transition-all duration-300 group-hover:scale-110 group-hover:rotate-6">{item.icon}</span>
-                <span className="text-sm tracking-tight">{item.label}</span>
-                {location.pathname === item.path && (
-                  <div className="absolute right-0 top-0 h-full w-1 bg-white rounded-l-full"></div>
-                )}
-              </Link>
-            ))}
+            {currentRoleItems.map(item => {
+              const badgeCount = 
+                (item.id === 'billing' && user?.role === 'admin') ? stats.pendingBills :
+                (item.id === 'cases' && user?.role === 'nurse') ? stats.openCases :
+                (item.id === 'dashboard' && user?.role === 'doctor') ? stats.todayAppts : 0;
+
+              return (
+                <Link key={item.id} to={item.path} onClick={onClose} className={getItemClasses(item.path)}>
+                  <span className="material-symbols-outlined transition-all duration-300 group-hover:scale-110 group-hover:rotate-6">{item.icon}</span>
+                  <span className="text-sm tracking-tight">{item.label}</span>
+                  {badgeCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center size-5 bg-white text-primary text-[10px] font-black rounded-full shadow-sm ring-2 ring-white/20 animate-in zoom-in duration-500">
+                      {badgeCount}
+                    </span>
+                  )}
+                  {location.pathname === item.path && (
+                    <div className="absolute right-0 top-0 h-full w-1 bg-white rounded-l-full"></div>
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="p-4 space-y-3">
@@ -151,12 +206,24 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto no-scrollbar">
-          {currentRoleItems.map(item => (
-            <Link key={item.id} to={item.path} onClick={onClose} className={getItemClasses(item.path)}>
-              <span className={`material-symbols-outlined transition-transform group-hover:scale-110 ${location.pathname === item.path ? 'scale-110' : ''}`}>{item.icon}</span>
-              <span className="text-sm font-bold tracking-tight uppercase text-[11px]">{item.label}</span>
-            </Link>
-          ))}
+          {currentRoleItems.map(item => {
+            const badgeCount = 
+              (item.id === 'billing' && user?.role === 'admin') ? stats.pendingBills :
+              (item.id === 'cases' && user?.role === 'nurse') ? stats.openCases :
+              (item.id === 'dashboard' && user?.role === 'doctor') ? stats.todayAppts : 0;
+
+            return (
+              <Link key={item.id} to={item.path} onClick={onClose} className={getItemClasses(item.path)}>
+                <span className={`material-symbols-outlined transition-transform group-hover:scale-110 ${location.pathname === item.path ? 'scale-110' : ''}`}>{item.icon}</span>
+                <span className="text-sm font-bold tracking-tight uppercase text-[11px] flex-1">{item.label}</span>
+                {badgeCount > 0 && (
+                  <span className="flex items-center justify-center size-5 bg-primary text-white text-[10px] font-black rounded-full animate-in zoom-in duration-500">
+                    {badgeCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-3">

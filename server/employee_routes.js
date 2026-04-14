@@ -141,9 +141,24 @@ router.get('/verify/:idNumber', async (req, res) => {
 router.post('/', async (req, res) => {
   const { profileData, doctorData } = req.body;
   try {
-    // 1. Insert Employee
-    const cols = Object.keys(profileData).join(', ');
-    const vals = Object.values(profileData);
+    // 1. Insert Employee with sanitization
+    const validEmpCols = [
+      'firstname', 'lastname', 'employeetype', 'departmentid', 'employeenumber',
+      'dateofbirth', 'gender', 'phonenumber', 'addressline1', 'addressline2',
+      'city', 'state', 'postalcode', 'country', 'shifttype', 'joiningdate', 'isactive'
+    ];
+
+    const empData = {};
+    Object.keys(profileData || {}).forEach(key => {
+      const lowerKey = key.toLowerCase();
+      if (validEmpCols.includes(lowerKey)) {
+        const val = profileData[key];
+        empData[lowerKey] = (val === '' || val === undefined) ? null : val;
+      }
+    });
+
+    const cols = Object.keys(empData).join(', ');
+    const vals = Object.values(empData);
     const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
     const empResult = await query(`INSERT INTO employee (${cols}) VALUES (${placeholders}) RETURNING *`, vals);
     const employee = empResult.rows[0];
@@ -174,12 +189,58 @@ router.get('/:id', async (req, res) => {
 
 // Update employee
 router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { employeeData, doctorData } = req.body;
+
   try {
-    const updates = Object.keys(req.body).map((k, i) => `${k} = $${i + 1}`).join(', ');
-    const vals = [...Object.values(req.body), req.params.id];
-    const result = await query(`UPDATE employee SET ${updates} WHERE employeeid = $${vals.length} RETURNING *`, vals);
-    res.json(result.rows[0]);
+    // 1. Sanitize & Whitelist Employee Data
+    const validEmpCols = [
+      'firstname', 'lastname', 'employeetype', 'departmentid', 'employeenumber',
+      'dateofbirth', 'gender', 'phonenumber', 'addressline1', 'addressline2',
+      'city', 'state', 'postalcode', 'country', 'shifttype', 'joiningdate', 'isactive'
+    ];
+
+    const empUpdates = {};
+    Object.keys(employeeData || {}).forEach(key => {
+      const lowerKey = key.toLowerCase();
+      if (validEmpCols.includes(lowerKey)) {
+        // Convert empty strings to null for better DB compatibility
+        const val = employeeData[key];
+        empUpdates[lowerKey] = (val === '' || val === undefined) ? null : val;
+      }
+    });
+
+    if (Object.keys(empUpdates).length > 0) {
+      const setClause = Object.keys(empUpdates).map((k, i) => `${k} = $${i + 1}`).join(', ');
+      const vals = [...Object.values(empUpdates), id];
+      await query(`UPDATE employee SET ${setClause} WHERE employeeid = $${vals.length}`, vals);
+    }
+
+    // 2. Handle Doctor Profile Updates
+    if (doctorData && employeeData?.employeetype === 'Doctor') {
+      const validDrCols = ['specialization', 'licensenumber', 'qualification', 'experienceyears', 'consultationfee', 'isacceptingcases'];
+      const drUpdates = {};
+      
+      Object.keys(doctorData).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        if (validDrCols.includes(lowerKey)) {
+          const val = doctorData[key];
+          drUpdates[lowerKey] = (val === '' || val === undefined) ? null : val;
+        }
+      });
+
+      if (Object.keys(drUpdates).length > 0) {
+        const dSetClause = Object.keys(drUpdates).map((k, i) => `${k} = $${i + 1}`).join(', ');
+        const dVals = [...Object.values(drUpdates), id];
+        await query(`
+          UPDATE doctorprofile SET ${dSetClause} WHERE employeeid = $${dVals.length}
+        `, dVals);
+      }
+    }
+
+    res.json({ message: 'Staff member updated successfully' });
   } catch (err) {
+    console.error('Update Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

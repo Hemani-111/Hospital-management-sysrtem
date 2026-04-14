@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToastStore } from '../store/toastStore';
 import { roomService } from '../services/roomService';
 import { departmentService } from '../services/departmentService';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const typeConfig = {
   General:   { color: 'text-primary',    bg: 'bg-primary/5',    icon: 'bed',           badge: 'bg-primary/10 text-primary' },
@@ -210,9 +212,18 @@ const ManageRooms = () => {
 
         {/* Room Grid */}
         {isLoading ? (
-          <div className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Syncing room data...</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} variant="card" className="h-[280px] rounded-[2.5rem]" />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">No matching facility records found.</div>
+          <EmptyState 
+            title="No units found" 
+            description={search ? `We couldn't find any room matching "${search}"` : "The hospital facility database is currently empty."}
+            icon="meeting_room"
+            className="py-20"
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map((room) => {

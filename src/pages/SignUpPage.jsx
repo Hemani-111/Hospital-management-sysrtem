@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+
+const accountSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
 
 const STEPS = ['verify', 'account', 'success'];
 
@@ -19,13 +30,14 @@ const SignUpPage = () => {
   const [patientRecord, setPatientRecord] = useState(null); // matched patient row
 
   // Step 2: Account creation
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState(null);
+
+  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+    resolver: zodResolver(accountSchema),
+  });
 
   // ------------------------------------------------------------------
   // Step 1: Verify the signup code against the Patient table
@@ -50,31 +62,17 @@ const SignUpPage = () => {
   // ------------------------------------------------------------------
   // Step 2: Create local account & link to patient record
   // ------------------------------------------------------------------
-  const handleCreateAccount = async (e) => {
-    e.preventDefault();
+  const onAccountSubmit = async (data) => {
     setCreateError(null);
-
-    if (password !== confirmPassword) {
-      setCreateError('Passwords do not match.');
-      return;
-    }
-    if (password.length < 8) {
-      setCreateError('Password must be at least 8 characters.');
-      return;
-    }
-
     setCreateLoading(true);
 
     try {
-      // Create the patient user account
-      // This will handle the users table insert and patient table update
       const response = await api.post('/auth/register-patient', {
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         patientId: patientRecord.patientid
       });
 
-      // Update the local session
       setSession(response.data);
       setStep('success');
     } catch (err) {
@@ -284,7 +282,7 @@ const SignUpPage = () => {
 
             {/* ===== STEP 2: Create Account ===== */}
             {step === 'account' && patientRecord && (
-              <form onSubmit={handleCreateAccount} className="space-y-5">
+              <form onSubmit={handleSubmit(onAccountSubmit)} className="space-y-5">
                 {/* Verified patient banner */}
                 <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 p-4 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
@@ -306,14 +304,12 @@ const SignUpPage = () => {
                     <input
                       id="email"
                       type="email"
-                      className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all"
+                      className={`w-full rounded-lg border bg-white py-3 pl-11 pr-4 text-slate-900 focus:ring-2 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all ${errors.email ? 'border-red-400 focus:ring-red-200' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20'}`}
                       placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoFocus
+                      {...register('email')}
                     />
                   </div>
+                  {errors.email && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.email.message}</p>}
                 </div>
 
                 {/* Password */}
@@ -326,11 +322,9 @@ const SignUpPage = () => {
                     <input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
-                      className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-12 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all"
+                      className={`w-full rounded-lg border bg-white py-3 pl-11 pr-12 text-slate-900 focus:ring-2 dark:bg-slate-800 dark:text-slate-100 outline-none transition-all ${errors.password ? 'border-red-400 focus:ring-red-200' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20'}`}
                       placeholder="Min. 8 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                      {...register('password')}
                     />
                     <button
                       type="button"
@@ -340,25 +334,7 @@ const SignUpPage = () => {
                       <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
                     </button>
                   </div>
-                  {/* Strength indicator */}
-                  {password && (
-                    <div className="flex gap-1 mt-1">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div
-                          key={i}
-                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                            password.length >= i * 3
-                              ? password.length >= 12
-                                ? 'bg-emerald-400'
-                                : password.length >= 8
-                                ? 'bg-amber-400'
-                                : 'bg-red-400'
-                              : 'bg-slate-200 dark:bg-slate-700'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {errors.password && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.password.message}</p>}
                 </div>
 
                 {/* Confirm Password */}
@@ -371,17 +347,9 @@ const SignUpPage = () => {
                     <input
                       id="confirm-password"
                       type={showConfirmPassword ? 'text' : 'password'}
-                      className={`w-full rounded-lg border py-3 pl-11 pr-12 text-slate-900 focus:ring-2 outline-none transition-all dark:text-slate-100 dark:bg-slate-800 ${
-                        confirmPassword && password !== confirmPassword
-                          ? 'border-red-400 focus:border-red-400 focus:ring-red-200 bg-red-50 dark:bg-red-900/10'
-                          : confirmPassword && password === confirmPassword
-                          ? 'border-emerald-400 focus:border-emerald-400 focus:ring-emerald-200 bg-white dark:bg-slate-800'
-                          : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20 bg-white dark:bg-slate-800'
-                      }`}
+                      className={`w-full rounded-lg border py-3 pl-11 pr-4 text-slate-900 focus:ring-2 outline-none transition-all dark:text-slate-100 dark:bg-slate-800 ${errors.confirmPassword ? 'border-red-400 focus:border-red-400 focus:ring-red-200 bg-red-50' : 'border-slate-300 dark:border-slate-700 focus:border-primary focus:ring-primary/20 bg-white'}`}
                       placeholder="Re-enter password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
+                      {...register('confirmPassword')}
                     />
                     <button
                       type="button"
@@ -390,10 +358,8 @@ const SignUpPage = () => {
                     >
                       <span className="material-symbols-outlined">{showConfirmPassword ? 'visibility_off' : 'visibility'}</span>
                     </button>
-                    {confirmPassword && password === confirmPassword && (
-                      <span className="material-symbols-outlined absolute right-10 top-1/2 -translate-y-1/2 text-emerald-500 text-sm">check_circle</span>
-                    )}
                   </div>
+                  {errors.confirmPassword && <p className="text-[10px] text-red-500 font-bold ml-1">{errors.confirmPassword.message}</p>}
                 </div>
 
                 {createError && (

@@ -4,6 +4,8 @@ import StatCard from '../components/ui/StatCard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { billingService } from '../services/billingService';
 import { useToastStore } from '../store/toastStore';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 const statusColors = {
   Paid:    'bg-green-100 text-green-700',
@@ -15,6 +17,8 @@ const statusColors = {
 const BillingManagement = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const queryClient = useQueryClient();
   const { addToast } = useToastStore();
 
@@ -39,6 +43,17 @@ const BillingManagement = () => {
   const { data: bills = [], isLoading } = useQuery({
     queryKey: ['all-bills'],
     queryFn: () => billingService.getAll(),
+  });
+
+  const filteredBills = (bills || []).filter(bill => {
+    const patientName = `${bill.caserequest?.patient?.firstname} ${bill.caserequest?.patient?.lastname}`.toLowerCase();
+    const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || 
+                          bill.billid.toString().includes(searchTerm) ||
+                          bill.caserequestid.toString().includes(searchTerm);
+    
+    const matchesStatus = statusFilter === 'All' || bill.paymentstatus === statusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
   const markPaidMutation = useMutation({
@@ -112,13 +127,47 @@ const BillingManagement = () => {
           </div>
         </div>
 
+        {/* Filters Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-6 no-print bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+           <div className="flex-1 min-w-[300px] relative group">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+              <input 
+                type="text"
+                placeholder="Search bills by patient name or ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-slate-400"
+              />
+           </div>
+           <div className="flex gap-3">
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-3 text-sm font-black text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-primary/20 outline-none uppercase tracking-widest cursor-pointer"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Paid">Paid</option>
+                <option value="Pending">Pending</option>
+                <option value="Partial">Partial</option>
+                <option value="Waived">Waived</option>
+              </select>
+              <button 
+                onClick={() => { setSearchTerm(''); setStatusFilter('All'); }}
+                className="p-3 text-slate-400 hover:text-primary transition-colors"
+                title="Reset Filters"
+              >
+                <span className="material-symbols-outlined">restart_alt</span>
+              </button>
+           </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 no-print">
           {billingStats.map((s) => <StatCard key={s.title} {...s} />)}
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-12">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className="overflow-x-auto scrollbar-hide">
+            <table className="w-full text-left min-w-[1100px]">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 text-xs font-black uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                 <tr>
                   <th className="px-8 py-5">Bill ID</th>
@@ -133,11 +182,25 @@ const BillingManagement = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {isLoading ? (
-                  <tr><td colSpan="8" className="px-8 py-12 text-center text-slate-400">Loading bills...</td></tr>
-                ) : bills.length === 0 ? (
-                  <tr><td colSpan="8" className="px-8 py-12 text-center text-slate-400">No bills found.</td></tr>
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan="8" className="p-0">
+                        <Skeleton variant="table-row" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredBills.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">
+                      <EmptyState 
+                        title="No invoices found" 
+                        description={searchTerm ? `No bills match your search for "${searchTerm}"` : "There are no generated bills in the system yet."}
+                        icon="receipt_long"
+                      />
+                    </td>
+                  </tr>
                 ) : (
-                  bills.map((inv) => (
+                  filteredBills.map((inv) => (
                     <React.Fragment key={inv.billid}>
                       <tr className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-all ${expandedId === inv.billid ? 'bg-primary/5 dark:bg-primary/10 border-l-[6px] border-primary' : ''}`}>
                         <td className="px-8 py-5 text-sm font-bold text-slate-500">#BILL-{inv.billid}</td>
@@ -210,7 +273,7 @@ const BillingManagement = () => {
             </table>
           </div>
           <div className="px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-widest no-print">
-            <span>Showing {bills.length} invoice(s)</span>
+            <span>Showing {filteredBills.length} invoice(s)</span>
           </div>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { useToastStore } from '../store/toastStore';
 import { patientPortalService } from '../services/patientPortalService';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const TABS = ['Overview', 'Diagnosis', 'Prescription', 'Lab Results', 'Billing'];
 
@@ -168,9 +170,16 @@ const PatientCases = () => {
         <div className="w-2/5 flex flex-col gap-4 overflow-y-auto pr-2">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-2">My Consultations</h3>
           {isLoading ? (
-            <div className="text-slate-400 text-sm">Loading cases...</div>
+            [...Array(3)].map((_, i) => (
+              <Skeleton key={i} variant="card" className="h-28 rounded-xl" />
+            ))
           ) : cases.length === 0 ? (
-            <div className="text-slate-400 text-sm">No cases found.</div>
+            <EmptyState 
+              title="No consultations yet" 
+              description="You don't have any medical case history recorded in our system."
+              icon="history"
+              className="py-10"
+            />
           ) : (
             cases.map((c) => (
               <div

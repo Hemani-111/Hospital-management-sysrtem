@@ -42,8 +42,8 @@ export const employeeService = {
     return response.data;
   },
 
-  update: async (employeeId, employeeData) => {
-    const response = await api.put(`/employees/${employeeId}`, employeeData);
+  update: async (employeeId, employeeData, doctorData = null) => {
+    const response = await api.put(`/employees/${employeeId}`, { employeeData, doctorData });
     return response.data;
   },
 

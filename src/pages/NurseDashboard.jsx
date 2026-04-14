@@ -2,6 +2,8 @@ import React from 'react';
 import MainLayout from '../layouts/MainLayout';
 import StatCard from '../components/ui/StatCard';
 import { useNavigate } from 'react-router-dom';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { employeeService } from '../services/employeeService';
@@ -13,29 +15,28 @@ const NurseDashboard = () => {
   const { session } = useAuthStore();
   const userEmail = session?.user?.email;
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: loadProfile } = useQuery({
     queryKey: ['nurse-profile', userEmail],
     queryFn: () => employeeService.getProfileByEmail(userEmail),
     enabled: !!userEmail,
   });
-  const employeeId = profile?.employeeid;
 
-  const { data: openCases } = useQuery({
+  const { data: openCases, isLoading: loadCases } = useQuery({
     queryKey: ['open-cases-dept', profile?.departmentid],
     queryFn: () => caseService.getAll({ assigneddeptid: profile.departmentid, status: 'Open' }),
     enabled: !!profile?.departmentid,
   });
 
-  const { data: recentAssessments } = useQuery({
+  const { data: recentAssessments, isLoading: loadAssessments } = useQuery({
     queryKey: ['recent-assessments'],
     queryFn: () => assessmentService.getAll(),
   });
 
-  const { data: labQueue } = useQuery({
+  const { data: labQueue, isLoading: loadLabs } = useQuery({
     queryKey: ['lab-queue-dept', profile?.departmentid],
     queryFn: () => caseService.getLabQueue({ assigneddeptid: profile.departmentid }),
     enabled: !!profile?.departmentid,
-    refetchInterval: 2000
+    refetchInterval: 5000
   });
 
   // Get last 2 assessments for the pending triage section
@@ -49,28 +50,7 @@ const NurseDashboard = () => {
 
   return (
     <MainLayout title="Nurse Dashboard" hidePadding={true}>
-      <header className="hidden md:flex h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 items-center justify-between px-8 sticky top-0 z-40 glass-morphism">
-        <div className="flex items-center gap-4">
-          <div className="size-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 ring-1 ring-white/20">
-            <span className="material-symbols-outlined text-2xl">healing</span>
-          </div>
-          <div>
-            <h2 className="text-xl font-display font-black text-slate-900 dark:text-slate-100 tracking-tight">Nursing Station</h2>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">{profile?.department?.name || 'Your Ward'} • Shift active</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight leading-none mb-1">
-              {profile ? `${profile.firstname} ${profile.lastname}` : 'Loading...'}
-            </p>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">{profile?.employeetype || 'Nurse'}</p>
-          </div>
-          <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 overflow-hidden shadow-inner">
-            <img src={`https://ui-avatars.com/api/?name=${profile?.firstname}+${profile?.lastname}&background=random`} alt="Nurse" className="w-full h-full object-cover" />
-          </div>
-        </div>
-      </header>
+
 
       <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
         <header className="relative w-full min-h-[160px] md:h-48 rounded-[2.5rem] overflow-hidden flex flex-col justify-center px-8 md:px-12 text-white bg-[#1f507a] shadow-2xl border border-white/10">
@@ -137,8 +117,17 @@ const NurseDashboard = () => {
           </div>
 
           <div className="p-6 md:p-8 space-y-6">
-            {(labQueue || []).length === 0 ? (
-              <div className="p-10 text-center text-slate-400 font-bold">No pending lab tests for your department.</div>
+            {loadLabs ? (
+               [...Array(2)].map((_, i) => (
+                <Skeleton key={i} variant="table-row" className="h-28 rounded-3xl" />
+               ))
+            ) : (labQueue || []).length === 0 ? (
+               <EmptyState 
+                 title="Clear Lab Queue" 
+                 description="No pending laboratory tests require your department's results right now."
+                 icon="biotech"
+                 className="py-12"
+               />
             ) : (
               (labQueue || []).slice(0, 5).map((test) => (
                 <div key={test.reportid} className="flex flex-col md:flex-row md:items-center justify-between p-7 rounded-3xl bg-white/40 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/50 hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-premium group transition-all duration-500 cursor-pointer relative overflow-hidden">
@@ -188,8 +177,17 @@ const NurseDashboard = () => {
           </div>
 
           <div className="p-6 md:p-8 space-y-6">
-            {(openCases || []).length === 0 ? (
-              <div className="p-10 text-center text-slate-400 font-bold">No open cases requiring triage.</div>
+            {loadCases ? (
+               [...Array(2)].map((_, i) => (
+                <Skeleton key={i} variant="table-row" className="h-28 rounded-3xl" />
+               ))
+            ) : (openCases || []).length === 0 ? (
+               <EmptyState 
+                 title="No Triage Cases" 
+                 description="All patients in your department have been triaged. Excellent work!"
+                 icon="fact_check"
+                 className="py-12"
+               />
             ) : (
               (openCases || []).slice(0, 5).map((cs) => (
                 <div key={cs.caserequestid} className="flex flex-col md:flex-row md:items-center justify-between p-7 rounded-3xl bg-white/40 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/50 hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-premium group transition-all duration-500 cursor-pointer relative overflow-hidden">

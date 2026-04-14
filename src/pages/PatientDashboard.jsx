@@ -6,6 +6,8 @@ import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { patientPortalService } from '../services/patientPortalService';
 import { appointmentService } from '../services/appointmentService';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
@@ -53,8 +55,14 @@ const PatientDashboard = () => {
   if (isLoading) {
     return (
       <MainLayout title="Patient Dashboard" hidePadding={true}>
-        <div className="flex items-center justify-center min-h-screen">
-          <span className="animate-spin material-symbols-outlined text-4xl text-primary">progress_activity</span>
+        <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
+          <Skeleton variant="card" className="h-48 rounded-[2.5rem]" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-8">
+            <Skeleton variant="card" className="h-32 rounded-3xl" />
+            <Skeleton variant="card" className="h-32 rounded-3xl" />
+            <Skeleton variant="card" className="h-32 rounded-3xl" />
+          </div>
+          <Skeleton variant="card" className="h-96 rounded-[2.5rem]" />
         </div>
       </MainLayout>
     );

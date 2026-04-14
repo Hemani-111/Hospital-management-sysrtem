@@ -23,6 +23,7 @@ import PatientRecords from './pages/PatientRecords';
 import VitalsMonitor from './pages/VitalsMonitor';
 import NurseLabResults from './pages/NurseLabResults';
 import NurseAdmissions from './pages/NurseAdmissions';
+import HospitalSupport from './pages/HospitalSupport';
 
 // Admin Extracted Pages
 import AssignCase from './pages/AssignCase';
@@ -161,6 +162,7 @@ function App() {
               <Route path="/patient/cases" element={<ProtectedRoute allowedRoles={['patient']}><PatientCases /></ProtectedRoute>} />
               <Route path="/patient/billing" element={<ProtectedRoute allowedRoles={['patient']}><PatientBills /></ProtectedRoute>} />
               <Route path="/feedback" element={<ProtectedRoute allowedRoles={['patient']}><PatientFeedback /></ProtectedRoute>} />
+              <Route path="/support" element={<ProtectedRoute allowedRoles={['patient']}><HospitalSupport /></ProtectedRoute>} />
 
               <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
               <Route path="*" element={<Navigate to="/" />} />

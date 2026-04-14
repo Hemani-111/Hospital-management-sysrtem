@@ -6,6 +6,8 @@ import { caseService } from '../services/caseService';
 import { useAuthStore } from '../store/authStore';
 import { employeeService } from '../services/employeeService';
 import { appointmentService } from '../services/appointmentService';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const DoctorCaseDetail = () => {
     const { id } = useParams();
@@ -203,9 +205,15 @@ const DoctorCaseDetail = () => {
 
     if (isLoading) {
       return (
-        <MainLayout title="Loading Case..." hidePadding={true}>
-          <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-             <span className="animate-spin material-symbols-outlined text-4xl text-primary">progress_activity</span>
+        <MainLayout title="Loading Case Details..." hidePadding={true}>
+          <div className="flex flex-col lg:flex-row gap-6 p-6 lg:p-10 max-w-[1440px] mx-auto w-full">
+            <aside className="w-full lg:w-[380px] space-y-6">
+              <Skeleton variant="card" className="h-96 rounded-2xl" />
+              <Skeleton variant="card" className="h-64 rounded-2xl" />
+            </aside>
+            <section className="flex-1 space-y-6">
+              <Skeleton variant="card" className="h-[600px] rounded-2xl" />
+            </section>
           </div>
         </MainLayout>
       );
@@ -641,7 +649,12 @@ const DoctorCaseDetail = () => {
                 <div className="flex flex-col gap-4">
                   <h3 className="text-lg font-bold">Ordered Tests ({labTests.length})</h3>
                   {labTests.length === 0 ? (
-                    <p className="text-slate-500 italic">No lab tests ordered for this case yet.</p>
+                    <EmptyState 
+                      title="No tests ordered"
+                      description="There are no laboratory investigations associated with this case file yet."
+                      icon="biotech"
+                      className="py-12"
+                    />
                   ) : (
                     <div className="grid grid-cols-1 gap-4">
                       {labTests.map(test => (

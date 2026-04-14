@@ -2,21 +2,30 @@ import React, { useState } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
 
 const PatientList = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [genderFilter, setGenderFilter] = useState('All');
+  const [bloodFilter, setBloodFilter] = useState('All');
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ['patients'],
     queryFn: () => patientService.getAll()
   });
 
-  const filteredPatients = (patients || []).filter(pt => 
-    `${pt.firstname} ${pt.lastname}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pt.phonenumber?.includes(searchTerm) ||
-    pt.patientid?.toString().includes(searchTerm)
-  );
+  const filteredPatients = (patients || []).filter(pt => {
+    const matchesSearch = `${pt.firstname} ${pt.lastname}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pt.phonenumber?.includes(searchTerm) ||
+      pt.patientid?.toString().includes(searchTerm);
+    
+    const matchesGender = genderFilter === 'All' || pt.gender === genderFilter;
+    const matchesBlood = bloodFilter === 'All' || pt.bloodgroup === bloodFilter;
+
+    return matchesSearch && matchesGender && matchesBlood;
+  });
 
   return (
     <MainLayout title="Patient List" hidePadding={true}>
@@ -61,17 +70,29 @@ const PatientList = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <select className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none">
-                  <option>Gender: All</option>
-                  <option>Male</option>
-                  <option>Female</option>
+                <select 
+                  value={genderFilter}
+                  onChange={(e) => setGenderFilter(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="All">Gender: All</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
                 </select>
-                <select className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none">
-                  <option>Blood Group: All</option>
-                  <option>A+</option>
-                  <option>O+</option>
-                  <option>B+</option>
-                  <option>AB+</option>
+                <select 
+                  value={bloodFilter}
+                  onChange={(e) => setBloodFilter(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  <option value="All">Blood Group: All</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
                 </select>
               </div>
             </div>
@@ -81,49 +102,66 @@ const PatientList = () => {
             </button>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-semibold tracking-wider">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto scrollbar-hide">
+              <table className="w-full text-left min-w-[1000px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest">
                 <tr>
-                  <th className="px-6 py-4">ID</th>
-                  <th className="px-6 py-4">Name</th>
-                  <th className="px-6 py-4">Age</th>
-                  <th className="px-6 py-4">Gender</th>
-                  <th className="px-6 py-4">Blood Group</th>
-                  <th className="px-6 py-4">Phone</th>
-                  <th className="px-6 py-4">Cases</th>
-                  <th className="px-6 py-4">Insurance</th>
-                  <th className="px-6 py-4 text-center">Action</th>
+                  <th className="px-8 py-5">Patient Identity</th>
+                  <th className="px-8 py-5">Demographics</th>
+                  <th className="px-8 py-5">Contact</th>
+                  <th className="px-8 py-5">Life Metrics</th>
+                  <th className="px-8 py-5">Case Summary</th>
+                  <th className="px-8 py-5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan="9" className="px-6 py-10 text-center text-slate-400">Loading patients...</td>
-                  </tr>
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan="6" className="p-0">
+                        <Skeleton variant="table-row" />
+                      </td>
+                    </tr>
+                  ))
                 ) : filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="px-6 py-10 text-center text-slate-400">No patients found.</td>
+                    <td colSpan="6">
+                      <EmptyState 
+                        title="No patients found" 
+                        description={searchTerm ? `We couldn't find any patient matching "${searchTerm}"` : "The patient database is currently empty."}
+                        icon="person_search"
+                      />
+                    </td>
                   </tr>
                 ) : (
                   filteredPatients.map((pt) => (
-                    <tr key={pt.patientid} className={`transition-colors cursor-pointer ${selectedPatient?.patientid === pt.patientid ? 'bg-primary/5' : 'hover:bg-slate-50'}`} onClick={() => setSelectedPatient(pt)}>
-                      <td className={`px-6 py-4 font-medium ${selectedPatient?.patientid === pt.patientid ? 'text-primary' : 'text-slate-600'}`}>#PT-{pt.patientid}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-900">{pt.firstname} {pt.lastname}</td>
-                      <td className="px-6 py-4">{pt.dateofbirth ? new Date().getFullYear() - new Date(pt.dateofbirth).getFullYear() : 'N/A'}</td>
-                      <td className="px-6 py-4 text-slate-600">{pt.gender}</td>
-                      <td className="px-6 py-4"><span className={`px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-bold`}>{pt.bloodgroup || 'N/A'}</span></td>
-                      <td className="px-6 py-4">{pt.phonenumber}</td>
-                      <td className={`px-6 py-4 ${selectedPatient?.patientid === pt.patientid ? 'font-bold text-primary underline' : ''}`}>-</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600`}>
-                          <span className={`w-1.5 h-1.5 rounded-full bg-slate-400`}></span>
-                          Check Cases
+                    <tr key={pt.patientid} className={`transition-all duration-300 cursor-pointer ${selectedPatient?.patientid === pt.patientid ? 'bg-primary/5 dark:bg-primary/10 border-l-4 border-primary' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`} onClick={() => setSelectedPatient(pt)}>
+                      <td className="px-8 py-5">
+                        <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">#PT-{pt.patientid}</p>
+                        <p className={`font-black tracking-tight ${selectedPatient?.patientid === pt.patientid ? 'text-primary' : 'text-slate-900 dark:text-white text-base'}`}>{pt.firstname} {pt.lastname}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                         <div className="flex flex-col gap-0.5">
+                            <span className="text-slate-600 dark:text-slate-300 font-bold">{pt.dateofbirth ? new Date().getFullYear() - new Date(pt.dateofbirth).getFullYear() : 'N/A'} Years</span>
+                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{pt.gender}</span>
+                         </div>
+                      </td>
+                      <td className="px-8 py-5">
+                         <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm text-slate-300">call</span>
+                            <span className="text-slate-600 dark:text-slate-300 font-medium">{pt.phonenumber}</span>
+                         </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={`px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800`}>
+                          {pt.bloodgroup || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <button className={selectedPatient?.patientid === pt.patientid ? 'bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold' : 'text-primary hover:underline font-semibold'}>
-                          {selectedPatient?.patientid === pt.patientid ? 'Viewing' : 'View'}
+                      <td className="px-8 py-5 text-slate-500 font-bold italic">No active cases</td>
+                      <td className="px-8 py-5 text-center">
+                        <button className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedPatient?.patientid === pt.patientid ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-primary hover:bg-primary/5'}`}>
+                          {selectedPatient?.patientid === pt.patientid ? 'Viewing' : 'Inspect'}
                         </button>
                       </td>
                     </tr>
@@ -131,22 +169,21 @@ const PatientList = () => {
                 )}
               </tbody>
             </table>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 font-medium">
-              <span>Showing {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''}</span>
-              <div className="flex gap-1">
-                <button className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center hover:bg-white transition-colors">
-                  <span className="material-symbols-outlined text-sm">chevron_left</span>
-                </button>
-                <button className="w-8 h-8 rounded bg-primary text-white flex items-center justify-center">1</button>
-                <button className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center hover:bg-white transition-colors">2</button>
-                <button className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center hover:bg-white transition-colors">3</button>
-                <button className="w-8 h-8 rounded border border-slate-200 flex items-center justify-center hover:bg-white transition-colors">
-                  <span className="material-symbols-outlined text-sm">chevron_right</span>
-                </button>
-              </div>
+          </div>
+          <div className="px-8 py-5 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            <span>Displaying {filteredPatients.length} records</span>
+            <div className="flex gap-2">
+              <button className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50">
+                <span className="material-symbols-outlined text-sm font-black">chevron_left</span>
+              </button>
+              <button className="px-4 py-1.5 rounded-lg bg-primary text-white shadow-lg shadow-primary/20">1</button>
+              <button className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-95">
+                <span className="material-symbols-outlined text-sm font-black">chevron_right</span>
+              </button>
             </div>
           </div>
         </div>
+      </div>
 
         {/* Right Side Modal Overlay (Slide-out) */}
         {selectedPatient && (

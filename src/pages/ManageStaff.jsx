@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToastStore } from '../store/toastStore';
 import { employeeService } from '../services/employeeService';
 import { departmentService } from '../services/departmentService';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const roleColors = {
   Doctor:        'bg-blue-100 text-blue-700',
@@ -70,7 +72,7 @@ const ManageStaff = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => employeeService.update(id, data),
+    mutationFn: ({ id, data, doctor }) => employeeService.update(id, data, doctor),
     onSuccess: () => {
       queryClient.invalidateQueries(['staff']);
       closeModal();
@@ -149,7 +151,19 @@ const ManageStaff = () => {
     if (isEditMode) {
       // On edit, don't touch signupcode or userid
       const { signupcode, userid, ...editPayload } = formData;
-      updateMutation.mutate({ id: selectedId, data: editPayload });
+      
+      // Sanitize dates and trim strings
+      const sanitizedPayload = {};
+      Object.keys(editPayload).forEach(k => {
+        const val = editPayload[k];
+        sanitizedPayload[k] = (val === '' || val === undefined) ? null : (typeof val === 'string' ? val.trim() : val);
+      });
+
+      updateMutation.mutate({ 
+        id: selectedId, 
+        data: sanitizedPayload,
+        doctor: formData.employeetype === 'Doctor' ? doctorData : null
+      });
     } else {
       createMutation.mutate({
         profile: formData,
@@ -244,8 +258,8 @@ const ManageStaff = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className="overflow-x-auto scrollbar-hide">
+            <table className="w-full text-left min-w-[1000px]">
               <thead className="bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-black tracking-widest border-b border-slate-100 dark:border-slate-800">
                 <tr>
                   <th className="px-8 py-5">Employee</th>
@@ -259,9 +273,23 @@ const ManageStaff = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {isLoading ? (
-                  <tr><td colSpan="7" className="px-8 py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">Loading personnel...</td></tr>
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan="7" className="p-0">
+                        <Skeleton variant="table-row" />
+                      </td>
+                    </tr>
+                  ))
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan="7" className="px-8 py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No records found.</td></tr>
+                  <tr>
+                    <td colSpan="7">
+                      <EmptyState 
+                        title="No personnel found" 
+                        description={search ? `We couldn't find any staff member matching "${search}"` : "The hospital workforce database is currently empty."}
+                        icon="badge"
+                      />
+                    </td>
+                  </tr>
                 ) : filtered.map(s => (
                   <tr key={s.employeeid} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-all">
                     <td className="px-8 py-5">

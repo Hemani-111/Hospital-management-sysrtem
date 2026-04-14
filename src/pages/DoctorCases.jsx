@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToastStore } from '../store/toastStore';
 import { employeeService } from '../services/employeeService';
 import { caseService } from '../services/caseService';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 const DoctorCases = () => {
   const navigate = useNavigate();
@@ -95,9 +97,17 @@ const DoctorCases = () => {
 
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
-               <div className="col-span-full py-20 text-center text-slate-400 font-bold">Loading cases...</div>
+               [...Array(6)].map((_, i) => (
+                 <Skeleton key={i} variant="card" className="h-64 rounded-2xl" />
+               ))
             ) : filteredCases.length === 0 ? (
-               <div className="col-span-full py-20 text-center text-slate-400 font-bold">No cases found matching the criteria.</div>
+               <div className="col-span-full py-12">
+                 <EmptyState 
+                   title="No cases found" 
+                   description={`There are currently no cases matching the "${filter}" filter in your clinical queue.`}
+                   icon="clinical_notes"
+                 />
+               </div>
             ) : (
                filteredCases.map((cs) => (
                   <div key={cs.caserequestid} className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col h-full hover:shadow-md transition-shadow ${cs.urgency === 'Emergency' ? 'ring-1 ring-red-200' : ''}`}>
@@ -112,7 +122,7 @@ const DoctorCases = () => {
                                  cs.urgency === 'Emergency' ? 'bg-red-100 text-red-600' : 
                                  cs.urgency === 'Urgent' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
                               }`}>
-                                 {cs.urgency === 'Emergency' && <span className="material-symbols-outlined text-xs">emergency</span>} {cs.urgency}
+                                 {cs.urgency === 'Emergency' && <span className="material-symbols-outlined text-xs animate-pulse">emergency</span>} {cs.urgency}
                               </span>
                               <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-tight ${
                                  cs.status === 'Resolved' ? 'bg-green-100 text-green-600' : 
