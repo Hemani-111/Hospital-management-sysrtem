@@ -15,11 +15,20 @@ router.get('/diseases', async (req, res) => {
 router.get('/patients', async (req, res) => {
   try {
     const { unassessed } = req.query;
-    let sql = 'SELECT * FROM patient';
+    let sql = `
+      SELECT p.*, cr.caserequestid, cr.status as case_status, cr.isadmitted, r.roomnumber,
+             ins.providername as insurance_provider, pi.policynumber as insurance_policy,
+             ins.maxcoverageamount as insurance_coverage
+      FROM patient p
+      LEFT JOIN caserequest cr ON p.patientid = cr.patientid AND cr.status != 'Resolved'
+      LEFT JOIN room r ON cr.roomid = r.roomid
+      LEFT JOIN patientinsurance pi ON p.patientid = pi.patientid
+      LEFT JOIN insurance ins ON pi.insuranceid = ins.insuranceid
+    `;
     if (unassessed === 'true') {
-      sql += ' WHERE patientid NOT IN (SELECT patientid FROM patientassessment)';
+      sql += ' WHERE p.patientid NOT IN (SELECT patientid FROM patientassessment)';
     }
-    sql += ' ORDER BY createdon DESC';
+    sql += ' ORDER BY p.createdon DESC';
     const result = await query(sql);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -27,7 +36,14 @@ router.get('/patients', async (req, res) => {
 
 router.get('/patients/:id', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM patient WHERE patientid = $1', [req.params.id]);
+    const result = await query(`
+      SELECT p.*, ins.providername as insurance_provider, pi.policynumber as insurance_policy,
+             ins.maxcoverageamount as insurance_coverage
+      FROM patient p
+      LEFT JOIN patientinsurance pi ON p.patientid = pi.patientid
+      LEFT JOIN insurance ins ON pi.insuranceid = ins.insuranceid
+      WHERE p.patientid = $1
+    `, [req.params.id]);
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -370,6 +386,35 @@ router.patch('/cases/:id/admit', async (req, res) => {
     await query('UPDATE room SET isoccupied = TRUE WHERE roomid = $1', [roomid]);
     await query('COMMIT');
     res.json(caseResult.rows[0]);
+  } catch (err) {
+    await query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/cases/:id/discharge', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('BEGIN');
+    
+    // 1. Get roomid before clearing
+    const caseResult = await query('SELECT roomid FROM caserequest WHERE caserequestid = $1', [id]);
+    const roomId = caseResult.rows[0]?.roomid;
+
+    // 2. Perform discharge
+    await query(`
+      UPDATE caserequest 
+      SET isadmitted = FALSE, roomid = NULL, dischargedon = NOW() 
+      WHERE caserequestid = $1
+    `, [id]);
+
+    // 3. Free up room
+    if (roomId) {
+      await query('UPDATE room SET isoccupied = FALSE WHERE roomid = $1', [roomId]);
+    }
+
+    await query('COMMIT');
+    res.json({ message: 'Patient discharged successfully' });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: err.message });
@@ -904,11 +949,72 @@ router.get('/search/global', async (req, res) => {
        WHERE caserequestid::text ILIKE $1 OR casesummary ILIKE $1)
       LIMIT 10
     `, [searchTerm]);
-
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- PATIENT MANAGEMENT (ADMIN) ---
+
+router.get('/patients/:id/cases', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT cr.*, d.name as department_name,
+        e.firstname as doctor_firstname, e.lastname as doctor_lastname
+      FROM caserequest cr
+      LEFT JOIN department d ON cr.assigneddeptid = d.departmentid
+      LEFT JOIN employee e ON cr.doctoremployeeid = e.employeeid
+      WHERE cr.patientid = $1
+      ORDER BY cr.createdon DESC
+    `, [req.params.id]);
+    
+    const formatted = result.rows.map(row => ({
+      ...row,
+      department: { name: row.department_name },
+      doctor: row.doctor_firstname ? { firstname: row.doctor_firstname, lastname: row.doctor_lastname } : null
+    }));
+    res.json(formatted);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/patients/:id/assessments', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT pa.*, e.firstname as nurse_firstname, e.lastname as nurse_lastname
+      FROM patientassessment pa
+      LEFT JOIN employee e ON pa.nurseemployeeid = e.employeeid
+      WHERE pa.patientid = $1
+      ORDER BY pa.assessmentdate DESC
+    `, [req.params.id]);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/patients/:id', async (req, res) => {
+  try {
+    const { 
+      firstname, lastname, dateofbirth, gender, phonenumber, 
+      emergencycontact, addressline1, addressline2, city, state, 
+      postalcode, insurance 
+    } = req.body;
+    
+    const result = await query(`
+      UPDATE patient 
+      SET firstname = $1, lastname = $2, dateofbirth = $3, gender = $4, 
+          phonenumber = $5, emergencycontact = $6, addressline1 = $7, 
+          addressline2 = $8, city = $9, state = $10, postalcode = $11, 
+          insurance = $12
+      WHERE patientid = $13
+      RETURNING *
+    `, [
+      firstname, lastname, dateofbirth, gender, phonenumber, 
+      emergencycontact, addressline1, addressline2, city, state, 
+      postalcode, insurance, req.params.id
+    ]);
+    
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;

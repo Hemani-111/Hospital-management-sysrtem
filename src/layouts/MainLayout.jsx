@@ -15,13 +15,17 @@ const MainLayout = ({ children, hidePadding, title }) => {
         />
       )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="print:hidden">
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </div>
       
       <div className="flex-1 flex flex-col min-h-screen relative md:ml-64 transition-all duration-300">
-        <Header 
-          title={title || "Hospital Management"} 
-          onMenuClick={() => setIsSidebarOpen(true)} 
-        />
+        <div className="print:hidden">
+          <Header 
+            title={title || "Hospital Management"} 
+            onMenuClick={() => setIsSidebarOpen(true)} 
+          />
+        </div>
         
         <main className={`flex-1 flex flex-col ${hidePadding ? '' : 'p-4 md:p-8'}`}>
           {children}

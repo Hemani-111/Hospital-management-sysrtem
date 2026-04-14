@@ -11,7 +11,6 @@ const Header = ({ title, onMenuClick }) => {
   
   const [searchTerm, setSearchTerm] = React.useState('');
   const [results, setResults] = React.useState([]);
-  const [isSearching, setIsSearching] = React.useState(false);
   const searchRef = React.useRef(null);
 
   React.useEffect(() => {

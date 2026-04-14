@@ -78,5 +78,10 @@ export const caseService = {
   admitPatient: async (caseId, roomData) => {
     const response = await api.patch(`/cases/${caseId}/admit`, roomData);
     return response.data;
+  },
+
+  dischargePatient: async (caseId) => {
+    const response = await api.patch(`/cases/${caseId}/discharge`);
+    return response.data;
   }
 };

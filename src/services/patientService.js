@@ -40,5 +40,16 @@ export const patientService = {
   delete: async (id) => {
     await api.delete(`/patients/${id}`);
     return true;
+  },
+
+  // History methods
+  getCases: async (id) => {
+    const response = await api.get(`/patients/${id}/cases`);
+    return response.data;
+  },
+
+  getAssessments: async (id) => {
+    const response = await api.get(`/patients/${id}/assessments`);
+    return response.data;
   }
 };
