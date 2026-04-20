@@ -46,7 +46,9 @@ const Header = ({ title, onMenuClick }) => {
         >
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <h1 className="text-lg font-display font-black tracking-tighter text-primary dark:text-primary-light uppercase bg-primary/5 dark:bg-primary/20 px-3 py-1 rounded-lg md:hidden">HMS</h1>
+        <div className="size-14 flex items-center justify-center md:hidden overflow-hidden">
+          <img src="/logo.png" alt="HMS Logo" className="w-full h-full object-contain" />
+        </div>
         
         {/* Breadcrumb / Title on Desktop */}
         <div className="hidden md:flex items-center gap-3">
@@ -108,8 +110,8 @@ const Header = ({ title, onMenuClick }) => {
         >
           <span className="material-symbols-outlined text-xl">{theme === 'light' ? 'dark_mode' : 'light_mode'}</span>
         </button>
-        <div className="size-9 rounded-2xl bg-medical-gradient flex items-center justify-center text-white shadow-lg ring-2 ring-white dark:ring-slate-800 cursor-pointer hover:scale-105 transition-transform">
-          <span className="material-symbols-outlined text-[18px]">person</span>
+        <div className="size-20 flex items-center justify-center cursor-pointer hover:scale-110 transition-all overflow-hidden">
+          <img src="/logo.png" alt="Profile" className="w-full h-full object-contain" />
         </div>
       </div>
     </header>

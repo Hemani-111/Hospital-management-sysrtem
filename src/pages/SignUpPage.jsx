@@ -150,11 +150,11 @@ const SignUpPage = () => {
       <div className="relative hidden w-full flex-col justify-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
         <div className="relative z-10 flex flex-col gap-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <span className="material-symbols-outlined text-4xl">local_hospital</span>
+            <div className="flex h-36 w-36 items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Nexus Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-4xl font-black tracking-tight xl:text-5xl">
-              City Hospital <br /> Management System
+              Nexus Health <br /> Management System
             </h1>
           </div>
           <p className="max-w-md text-lg font-medium text-slate-200/90 leading-relaxed">
@@ -194,10 +194,10 @@ const SignUpPage = () => {
           {/* Mobile logo */}
           <div className="flex justify-center mb-8 lg:hidden">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                <span className="material-symbols-outlined text-white text-xl">local_hospital</span>
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
-              <span className="text-xl font-black text-slate-900 dark:text-white">City Hospital</span>
+              <span className="text-xl font-black text-slate-900 dark:text-white">Nexus Health</span>
             </div>
           </div>
 

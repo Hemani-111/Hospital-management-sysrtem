@@ -129,8 +129,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         <aside className={sidebarClasses}>
           <div className="p-6 pb-2 flex items-center justify-between">
             <div className="flex items-center gap-3 group/brand cursor-pointer">
-              <div className="size-11 rounded-2xl bg-white/20 flex items-center justify-center shadow-premium ring-1 ring-white/30 group-hover/brand:scale-110 transition-transform duration-500">
-                <span className="material-symbols-outlined text-white text-2xl">local_hospital</span>
+              <div className="size-20 flex items-center justify-center transition-transform duration-500 overflow-hidden p-1">
+                <img src="/logo.png" alt="Nexus Logo" className="w-full h-full object-contain" />
               </div>
               <div className="transition-all duration-300 group-hover/brand:translate-x-1">
                 <h1 className="font-black text-xl leading-none tracking-tighter text-white">MedAdmin</h1>
@@ -192,8 +192,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       <aside className={sidebarClasses}>
         <div className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="size-12 bg-medical-gradient rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20 transition-transform hover:scale-105">
-              <span className="material-symbols-outlined text-2xl font-bold">health_metrics</span>
+            <div className="size-20 flex items-center justify-center transition-transform hover:scale-105 overflow-hidden p-1">
+              <img src="/logo.png" alt="Nexus Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight text-primary uppercase">HealthSync</h1>

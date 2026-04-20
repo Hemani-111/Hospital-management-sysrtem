@@ -1,4 +1,4 @@
-# 🏥 Nexus Health: The Ultimate Hospital Management System
+# <img src="public/logo.png" width="40" height="40" style="vertical-align: middle; margin-right: 10px;"> Nexus Health: The Ultimate Hospital Management System
 
 Welcome to **Nexus Health**, a cutting-edge, full-stack Hospital Management System (HMS) designed to bridge the gap between complex clinical workflows and intuitive user experiences. Whether you're an Admin overseeing the entire hospital's pulse, a Doctor diagnosing cases, or a Patient tracking your recovery, Nexus Health provides a seamless digital ecosystem.
 

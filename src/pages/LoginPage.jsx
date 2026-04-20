@@ -45,11 +45,11 @@ const LoginPage = () => {
       <div className="relative hidden w-full flex-col justify-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
         <div className="relative z-10 flex flex-col gap-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <span className="material-symbols-outlined text-4xl">local_hospital</span>
+            <div className="flex h-36 w-36 items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Nexus Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-4xl font-black tracking-tight xl:text-5xl">
-              City Hospital <br /> Management System
+              Nexus Health <br /> Management System
             </h1>
           </div>
           <p className="max-w-md text-lg font-medium text-slate-200/90 leading-relaxed">
@@ -79,8 +79,8 @@ const LoginPage = () => {
       <div className="flex w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark p-6 lg:w-1/2">
         <div className="w-full max-w-md space-y-8 rounded-xl bg-white dark:bg-slate-900 p-8 shadow-xl border border-slate-200 dark:border-slate-800">
           <div className="text-center lg:text-left">
-            <div className="inline-flex lg:hidden mb-6 h-12 w-12 items-center justify-center rounded-lg bg-primary">
-              <span className="material-symbols-outlined text-white">local_hospital</span>
+            <div className="inline-flex lg:hidden mb-6 h-20 w-20 items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Welcome Back</h2>
             <p className="mt-2 text-slate-500 dark:text-slate-400">Please enter your details to access your dashboard.</p>
