@@ -375,13 +375,15 @@ CREATE TABLE Bill (
 -- ======================
 
 CREATE TABLE Feedback (
-    PatientID     INT NOT NULL REFERENCES Patient(PatientID),
-    EmployeeID    INT NOT NULL REFERENCES Employee(EmployeeID),
-    CaseRequestID INT NOT NULL REFERENCES CaseRequest(CaseRequestID),
-    Rating        SMALLINT CHECK (Rating BETWEEN 1 AND 5),
-    Comment       TEXT,
-    CreatedOn     TIMESTAMP DEFAULT NOW(),
-    PRIMARY KEY (PatientID, CaseRequestID, EmployeeID)
+    FeedbackID       SERIAL PRIMARY KEY,
+    PatientID        INT NOT NULL REFERENCES Patient(PatientID),
+    CaseRequestID    INT NOT NULL REFERENCES CaseRequest(CaseRequestID),
+    DoctorEmployeeID INT REFERENCES Employee(EmployeeID),
+    NurseEmployeeID  INT REFERENCES Employee(EmployeeID),
+    Rating           SMALLINT CHECK (Rating BETWEEN 1 AND 5),
+    Comment          TEXT,
+    CreatedOn        TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_feedback_patient_case UNIQUE (PatientID, CaseRequestID)
 );
 
 
@@ -403,4 +405,5 @@ CREATE INDEX idx_labreport_unbilled  ON LabReport(IsBilled) WHERE IsBilled = FAL
 CREATE INDEX idx_bill_caserequest    ON Bill(CaseRequestID);
 CREATE INDEX idx_bill_paymentstatus  ON Bill(PaymentStatus);
 
-CREATE INDEX idx_feedback_employee   ON Feedback(EmployeeID);
+CREATE INDEX idx_feedback_doctor ON Feedback(DoctorEmployeeID);
+CREATE INDEX idx_feedback_nurse  ON Feedback(NurseEmployeeID);

@@ -1,7 +1,15 @@
 import express from 'express';
 import { query } from '../db.js';
+import {
+  mapDoctorDiagnosisRowToUi,
+  mapDoctorPrescriptionRowToUi,
+  mapPatientLabReportRowToUi,
+  splitDoctorName,
+} from '../utils/viewMappers.js';
 
 const router = express.Router();
+
+const toEmptyArrayIfNull = (v) => (Array.isArray(v) ? v : []);
 
 // --- PATIENTS ---
 router.get('/', async (req, res) => {
@@ -79,10 +87,29 @@ router.get('/email/:email', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const cols = Object.keys(req.body).join(', ');
-    const vals = Object.values(req.body);
-    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
-    const result = await query(`INSERT INTO patient (${cols}) VALUES (${placeholders}) RETURNING *`, vals);
+    const {
+      firstname, lastname, dateofbirth, gender, phonenumber, emergencycontact,
+      bloodgroup, height, weight, addressline1, addressline2, city, state, postalcode, country, createdbyadminid
+    } = req.body;
+    
+    // Check if we have minimal required fields for the function
+    if (!firstname || !lastname || !dateofbirth || !phonenumber || !emergencycontact || !city || !state) {
+      // Fallback for simple inserts if frontend is not sending full profile initially
+      const cols = Object.keys(req.body).join(', ');
+      const vals = Object.values(req.body);
+      const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+      const result = await query(`INSERT INTO patient (${cols}) VALUES (${placeholders}) RETURNING *`, vals);
+      return res.status(201).json(result.rows[0]);
+    }
+
+    const result = await query(
+      `SELECT * FROM fn_register_patient($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`, 
+      [
+        firstname, lastname, dateofbirth, gender, phonenumber, emergencycontact, 
+        bloodgroup, height || null, weight || null, addressline1 || '', addressline2 || '', 
+        city, state, postalcode || '', country || 'India', createdbyadminid || 1
+      ]
+    );
     res.status(201).json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -127,13 +154,21 @@ router.get('/assessments/all', async (req, res) => {
 
 router.get('/assessments/pending', async (req, res) => {
   try {
-    const result = await query(`
-      SELECT cr.*, p.firstname, p.lastname 
-      FROM caserequest cr
-      JOIN patient p ON cr.patientid = p.patientid
-      WHERE cr.status = 'Open'
-    `);
-    res.json(result.rows);
+    const result = await query(`SELECT * FROM vw_open_cases_by_dept`);
+    // Map view columns to what frontend expects from raw query
+    const mapped = result.rows.map(r => ({
+      ...r,
+      caserequestid: r.caserequestid,
+      patientid: r.patientid,
+      assigneddeptid: r.departmentid,
+      casesummary: r.casesummary,
+      urgency: r.urgency,
+      status: r.casestatus,
+      createdon: r.casecreatedon,
+      firstname: r.patientname.split(' ')[0] || r.patientname,
+      lastname: r.patientname.split(' ').slice(1).join(' ') || ''
+    }));
+    res.json(mapped);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -145,34 +180,32 @@ router.post('/assessments', async (req, res) => {
       assignedDeptID, urgency, caseSummary
     } = req.body;
 
-    await query('BEGIN');
-
-    const assessmentResult = await query(
-      `INSERT INTO patientassessment 
-        (patientid, nurseemployeeid, symptoms, condition, temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [patientid, nurseemployeeid, symptoms, condition, temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes]
-    );
-    const assessment = assessmentResult.rows[0];
-
-    let caseRequest = null;
     if (assignedDeptID) {
-      const patientResult = await query('SELECT createdbyadminid FROM patient WHERE patientid = $1', [patientid]);
-      const createdByAdminId = patientResult.rows[0]?.createdbyadminid || 1;
-
-      const caseResult = await query(
-        `INSERT INTO caserequest 
-          (patientid, assessmentid, assigneddeptid, nurseemployeeid, createdbyadminid, casesummary, urgency, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'Open') RETURNING *`,
-        [patientid, assessment.assessmentid, assignedDeptID, nurseemployeeid, createdByAdminId, caseSummary || symptoms, urgency || 'Routine']
+      const result = await query(
+        `SELECT * FROM fn_create_case_request($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [
+          patientid, nurseemployeeid, symptoms, condition, 
+          temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes,
+          assignedDeptID, urgency || 'Routine', caseSummary || symptoms
+        ]
       );
-      caseRequest = caseResult.rows[0];
+      
+      res.status(201).json({ 
+        assessment: { assessmentid: result.rows[0].assessment_id }, 
+        caseRequest: { caserequestid: result.rows[0].case_request_id },
+        message: result.rows[0].message
+      });
+    } else {
+      // Just assessment
+      const assessmentResult = await query(
+        `INSERT INTO patientassessment 
+          (patientid, nurseemployeeid, symptoms, condition, temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        [patientid, nurseemployeeid, symptoms, condition, temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes]
+      );
+      res.status(201).json({ assessment: assessmentResult.rows[0] });
     }
-
-    await query('COMMIT');
-    res.status(201).json({ assessment, caseRequest });
   } catch (err) { 
-    await query('ROLLBACK');
     res.status(500).json({ error: err.message }); 
   }
 });
@@ -229,15 +262,15 @@ router.post('/feedback', async (req, res) => {
     if (!patientid || !employeeid || !caserequestid || !rating) {
       return res.status(400).json({ error: 'patientid, employeeid, caserequestid, and rating are required.' });
     }
-    const result = await query(`
-      INSERT INTO feedback (patientid, employeeid, caserequestid, rating, comment, createdon)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      ON CONFLICT (patientid, caserequestid, employeeid)
-      DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, createdon = NOW()
-      RETURNING *
-    `, [patientid, employeeid, caserequestid, rating, comment || '']);
+    const result = await query(
+      `SELECT * FROM fn_submit_feedback($1, $2, $3, $4, $5)`,
+      [patientid, employeeid, caserequestid, rating, comment || '']
+    );
     res.status(201).json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error('Feedback error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // --- PORTAL ---
@@ -257,6 +290,8 @@ router.get('/portal/profile/email/:email', async (req, res) => {
 
 router.get('/portal/cases/:id', async (req, res) => {
   try {
+    const patientId = req.params.id;
+
     const result = await query(`
       SELECT cr.*, d.name as department_name,
         e.firstname as doctor_firstname, e.lastname as doctor_lastname,
@@ -267,48 +302,195 @@ router.get('/portal/cases/:id', async (req, res) => {
       LEFT JOIN doctorprofile dp ON e.employeeid = dp.employeeid
       WHERE cr.patientid = $1
       ORDER BY cr.createdon DESC
-    `, [req.params.id]);
-    res.json(result.rows.map(row => ({
-      ...row,
-      department: { name: row.department_name },
-      doctor: row.doctor_firstname ? { firstname: row.doctor_firstname, lastname: row.doctor_lastname, specialization: row.doctor_specialization } : null
-    })));
+    `, [patientId]);
+
+    const cases = result.rows;
+    if (!cases.length) return res.json([]);
+
+    // Views: attach diagnosis/prescription/lab arrays for each case
+    const caseIds = cases.map((c) => c.caserequestid);
+
+    const diagnosisResult = await query(
+      `
+        SELECT
+          caserequestid,
+          diseaseid,
+          diseasename,
+          icd10code,
+          severity,
+          diagnosisnotes AS notes,
+          diagnosedon
+        FROM vw_doctor_diagnosis
+        WHERE patientid = $1
+        AND caserequestid = ANY($2)
+        ORDER BY diagnosedon DESC
+      `,
+      [patientId, caseIds]
+    );
+
+    const prescriptionResult = await query(
+      `
+        SELECT
+          caserequestid,
+          prescriptionid,
+          medicines,
+          instructions,
+          prescribedon
+        FROM vw_doctor_prescription
+        WHERE patientid = $1
+        AND caserequestid = ANY($2)
+        ORDER BY prescribedon DESC
+      `,
+      [patientId, caseIds]
+    );
+
+    const labResult = await query(
+      `
+        SELECT
+          reportid,
+          caserequestid,
+          labstatus,
+          orderedon,
+          resultedon,
+          testvalue,
+          testname,
+          unit,
+          normalrange
+        FROM vw_patient_lab_report
+        WHERE patientid = $1
+        AND caserequestid = ANY($2)
+        ORDER BY orderedon DESC
+      `,
+      [patientId, caseIds]
+    );
+
+    const diagnosisByCaseId = diagnosisResult.rows.reduce((acc, row) => {
+      const cid = row.caserequestid;
+      if (!acc[cid]) acc[cid] = [];
+      acc[cid].push(mapDoctorDiagnosisRowToUi(row));
+      return acc;
+    }, {});
+
+    const prescriptionByCaseId = prescriptionResult.rows.reduce((acc, row) => {
+      const cid = row.caserequestid;
+      if (!acc[cid]) acc[cid] = [];
+      acc[cid].push(mapDoctorPrescriptionRowToUi(row));
+      return acc;
+    }, {});
+
+    const labByCaseId = labResult.rows.reduce((acc, row) => {
+      const cid = row.caserequestid;
+      if (!acc[cid]) acc[cid] = [];
+      acc[cid].push(mapPatientLabReportRowToUi(row));
+      return acc;
+    }, {});
+
+    res.json(
+      cases.map((row) => ({
+        ...row,
+        department: { name: row.department_name },
+        doctor: row.doctor_firstname
+          ? {
+              firstname: row.doctor_firstname,
+              lastname: row.doctor_lastname,
+              specialization: row.doctor_specialization,
+            }
+          : null,
+        diagnosis: toEmptyArrayIfNull(diagnosisByCaseId[row.caserequestid]).sort(
+          (a, b) => new Date(b.diagnosedon ?? 0) - new Date(a.diagnosedon ?? 0)
+        ),
+        prescription: toEmptyArrayIfNull(
+          prescriptionByCaseId[row.caserequestid]
+        ),
+        labreport: toEmptyArrayIfNull(labByCaseId[row.caserequestid]),
+      }))
+    );
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/portal/bills/:id', async (req, res) => {
   try {
-    const result = await query(`
-      SELECT b.* FROM bill b
-      JOIN caserequest cr ON b.caserequestid = cr.caserequestid
-      WHERE cr.patientid = $1
-      ORDER BY b.generatedon DESC
-    `, [req.params.id]);
+    const result = await query(
+      `
+        SELECT DISTINCT ON (billid)
+          billid,
+          totalamount,
+          discount,
+          insurancecovered,
+          paymentstatus,
+          paymentmethod,
+          generatedon,
+          paidon
+        FROM vw_patient_appointments_bills
+        WHERE patientid = $1
+          AND billid IS NOT NULL
+        ORDER BY billid, generatedon DESC
+      `,
+      [req.params.id]
+    );
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/portal/appointments/:id', async (req, res) => {
   try {
-    const result = await query(`
-      SELECT a.*, e.firstname as doctor_firstname, e.lastname as doctor_lastname, dp.specialization as doctor_specialization
-      FROM appointment a
-      JOIN employee e ON a.doctoremployeeid = e.employeeid
-      LEFT JOIN doctorprofile dp ON e.employeeid = dp.employeeid
-      WHERE a.patientid = $1
-      ORDER BY a.appointmentdate DESC, a.starttime ASC
-    `, [req.params.id]);
-    res.json(result.rows.map(row => ({
-      ...row,
-      doctor: { firstname: row.doctor_firstname, lastname: row.doctor_lastname, specialization: row.doctor_specialization }
-    })));
+    const result = await query(
+      `
+        SELECT DISTINCT ON (appointmentid)
+          appointmentid,
+          appointmentdate,
+          starttime,
+          endtime,
+          appointmenttype,
+          appointmentstatus AS status,
+          doctorname,
+          specialization
+        FROM vw_patient_appointments_bills
+        WHERE patientid = $1
+          AND appointmentid IS NOT NULL
+        ORDER BY appointmentid, appointmentdate DESC, starttime ASC
+      `,
+      [req.params.id]
+    );
+
+    res.json(
+      result.rows.map((row) => {
+        const { firstname, lastname } = splitDoctorName(row.doctorname);
+        return {
+          ...row,
+          doctor: {
+            firstname,
+            lastname,
+            specialization: row.specialization,
+          },
+        };
+      })
+    );
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/portal/lab-reports/:id', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM labreport WHERE patientid = $1', [req.params.id]);
-    res.json(result.rows);
+    const result = await query(
+      `
+        SELECT
+          reportid,
+          caserequestid,
+          labstatus,
+          orderedon,
+          resultedon,
+          testvalue,
+          testname,
+          unit,
+          normalrange
+        FROM vw_patient_lab_report
+        WHERE patientid = $1
+        ORDER BY orderedon DESC
+      `,
+      [req.params.id]
+    );
+
+    res.json(result.rows.map(mapPatientLabReportRowToUi));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

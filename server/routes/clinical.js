@@ -1,5 +1,10 @@
 import express from 'express';
 import { query } from '../db.js';
+import {
+  mapDoctorDiagnosisRowToUi,
+  mapDoctorPrescriptionRowToUi,
+  splitDoctorName,
+} from '../utils/viewMappers.js';
 
 const router = express.Router();
 
@@ -41,7 +46,7 @@ router.get('/cases', async (req, res) => {
     sql += ' ORDER BY cr.createdon DESC';
 
     const result = await query(sql, params);
-    
+
     const formatted = result.rows.map(row => {
       const { firstname, lastname, gender, bloodgroup, dateofbirth, department_name, ...caseData } = row;
       return {
@@ -50,7 +55,7 @@ router.get('/cases', async (req, res) => {
         department: { name: department_name }
       };
     });
-    
+
     res.json(formatted);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -58,60 +63,249 @@ router.get('/cases', async (req, res) => {
 router.get('/cases/:id', async (req, res) => {
   try {
     const caseId = req.params.id;
-    
-    // 1. Get Case + Patient
-    const caseResult = await query(`
-      SELECT cr.*, p.firstname, p.lastname, p.gender, p.bloodgroup, p.dateofbirth, p.phonenumber
-      FROM caserequest cr
-      JOIN patient p ON cr.patientid = p.patientid
-      WHERE cr.caserequestid = $1
-    `, [caseId]);
-    
-    if (caseResult.rows.length === 0) return res.status(404).json({ error: 'Case not found' });
-    
-    const caseData = caseResult.rows[0];
-    const formattedCase = {
-      ...caseData,
-      patient: { 
-        firstname: caseData.firstname, 
-        lastname: caseData.lastname, 
-        gender: caseData.gender, 
-        bloodgroup: caseData.bloodgroup, 
-        dateofbirth: caseData.dateofbirth,
-        phonenumber: caseData.phonenumber
+
+    // 1) Core case + patient + doctor + department + assessment using view
+    const dashboardResult = await query(
+      `
+        SELECT
+          caserequestid,
+          casestatus,
+          urgency,
+          casesummary,
+          isadmitted,
+          admittedon,
+          dischargedon,
+          casecreatedon,
+          patientid,
+          patientname,
+          dateofbirth,
+          gender,
+          bloodgroup,
+          patientphone,
+          doctoremployeeid,
+          doctorname,
+          specialization,
+          department,
+          roomnumber,
+          roomtype,
+          symptoms,
+          condition,
+          temperature,
+          systolicbp,
+          diastolicbp,
+          pulserate,
+          oxygenlevel,
+          bloodsugar,
+          assessedon
+        FROM vw_doctor_case_dashboard
+        WHERE caserequestid = $1
+      `,
+      [caseId]
+    );
+
+    if (dashboardResult.rows.length === 0) {
+      // Fallback to avoid breaking the UI in case of view/filter mismatch.
+      const fallbackCase = await query(
+        `
+          SELECT cr.*, p.firstname, p.lastname, p.gender, p.bloodgroup, p.dateofbirth, p.phonenumber
+          FROM caserequest cr
+          JOIN patient p ON cr.patientid = p.patientid
+          WHERE cr.caserequestid = $1
+        `,
+        [caseId]
+      );
+      if (fallbackCase.rows.length === 0) {
+        return res.status(404).json({ error: 'Case not found' });
       }
+
+      const caseData = fallbackCase.rows[0];
+      const formattedCase = {
+        ...caseData,
+        status: caseData.status,
+        patient: {
+          firstname: caseData.firstname,
+          lastname: caseData.lastname,
+          gender: caseData.gender,
+          bloodgroup: caseData.bloodgroup,
+          dateofbirth: caseData.dateofbirth,
+          phonenumber: caseData.phonenumber,
+        },
+      };
+
+      const assessmentResult = await query(
+        `
+          SELECT *
+          FROM patientassessment
+          WHERE patientid = $1
+          ORDER BY assessedon DESC
+        `,
+        [caseData.patientid]
+      );
+      formattedCase.patientassessment = assessmentResult.rows;
+
+      const diagnosisResult = await query(
+        `
+          SELECT diseaseid, diseasename, icd10code, severity, diagnosisnotes as notes, diagnosedon
+          FROM vw_doctor_diagnosis
+          WHERE caserequestid = $1
+          ORDER BY diagnosedon DESC
+        `,
+        [caseId]
+      );
+      formattedCase.diagnosis = diagnosisResult.rows.map(
+        mapDoctorDiagnosisRowToUi
+      );
+
+      const prescriptionResult = await query(
+        `
+          SELECT prescriptionid, medicines, instructions, prescribedon
+          FROM vw_doctor_prescription
+          WHERE caserequestid = $1
+          ORDER BY prescribedon DESC
+        `,
+        [caseId]
+      );
+      formattedCase.prescription = prescriptionResult.rows.map(
+        mapDoctorPrescriptionRowToUi
+      );
+
+      return res.json(formattedCase);
+    }
+
+    const row = dashboardResult.rows[0];
+
+    const patientNameParts = splitDoctorName(row.patientname);
+    const doctorNameParts = splitDoctorName(row.doctorname);
+
+    const formattedCase = {
+      caserequestid: row.caserequestid,
+      patientid: row.patientid,
+      status: row.casestatus,
+      urgency: row.urgency,
+      casesummary: row.casesummary,
+      isadmitted: row.isadmitted,
+      admittedon: row.admittedon,
+      dischargedon: row.dischargedon,
+      createdon: row.casecreatedon,
+      doctoremployeeid: row.doctoremployeeid,
+      roomid: row.roomnumber, // view provides roomnumber, UI displays it as "Room ID"
+
+      firstname: patientNameParts.firstname,
+      lastname: patientNameParts.lastname,
+      gender: row.gender,
+      bloodgroup: row.bloodgroup,
+      dateofbirth: row.dateofbirth,
+      phonenumber: row.patientphone,
+
+      patient: {
+        firstname: patientNameParts.firstname,
+        lastname: patientNameParts.lastname,
+        gender: row.gender,
+        bloodgroup: row.bloodgroup,
+        dateofbirth: row.dateofbirth,
+        phonenumber: row.patientphone,
+      },
+
+      department: { name: row.department },
+      doctor: {
+        firstname: doctorNameParts.firstname,
+        lastname: doctorNameParts.lastname,
+        specialization: row.specialization,
+      },
+
+      // Views provide a single assessment row for this case; wrap it as an array.
+      patientassessment: [
+        {
+          symptoms: row.symptoms,
+          condition: row.condition,
+          temperature: row.temperature,
+          systolicbp: row.systolicbp,
+          diastolicbp: row.diastolicbp,
+          pulserate: row.pulserate,
+          oxygenlevel: row.oxygenlevel,
+          bloodsugar: row.bloodsugar,
+          assessedon: row.assessedon,
+          notes: null,
+        },
+      ],
     };
-    
-    // 2. Get Assessments (Vitals)
-    const assessmentResult = await query('SELECT * FROM patientassessment WHERE patientid = $1 ORDER BY assessedon DESC', [caseData.patientid]);
-    formattedCase.patientassessment = assessmentResult.rows;
-    
-    // 3. Get Diagnosis
-    const diagnosisResult = await query('SELECT * FROM diagnosis WHERE caserequestid = $1 ORDER BY diagnosedon DESC', [caseId]);
-    formattedCase.diagnosis = diagnosisResult.rows;
-    
-    // 4. Get Prescription
-    const prescriptionResult = await query('SELECT * FROM prescription WHERE caserequestid = $1 ORDER BY prescribedon DESC', [caseId]);
-    formattedCase.prescription = prescriptionResult.rows;
-    
+
+    // 2) Diagnosis/prescription from DB views
+    const diagnosisResult = await query(
+      `
+        SELECT
+          diseaseid,
+          diseasename,
+          icd10code,
+          severity,
+          diagnosisnotes AS notes,
+          diagnosedon
+        FROM vw_doctor_diagnosis
+        WHERE caserequestid = $1
+        ORDER BY diagnosedon DESC
+      `,
+      [caseId]
+    );
+    formattedCase.diagnosis = diagnosisResult.rows.map(
+      mapDoctorDiagnosisRowToUi
+    );
+
+    const prescriptionResult = await query(
+      `
+        SELECT
+          prescriptionid,
+          medicines,
+          instructions,
+          prescribedon
+        FROM vw_doctor_prescription
+        WHERE caserequestid = $1
+        ORDER BY prescribedon DESC
+      `,
+      [caseId]
+    );
+    formattedCase.prescription = prescriptionResult.rows.map(
+      mapDoctorPrescriptionRowToUi
+    );
+
     res.json(formattedCase);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/cases/patient/:id', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM caserequest WHERE patientid = $1', [req.params.id]);
+    const result = await query(`
+      SELECT caserequestid, casestatus as status, urgency, casesummary, isadmitted, 
+             admittedon, dischargedon, casedate as createdon, department as department_name, doctorname
+      FROM vw_patient_medical_history 
+      WHERE patientid = $1 
+      ORDER BY casedate DESC
+    `, [req.params.id]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.patch('/cases/:id/status', async (req, res) => {
   try {
+    const { status, remarks, doctoremployeeid } = req.body;
+    const caseId = req.params.id;
+
+    // Use Database Function for Case Acceptance
+    if (status === 'Accepted' && doctoremployeeid) {
+      const result = await query('SELECT * FROM fn_accept_reject_case($1, $2, $3)', [caseId, doctoremployeeid, 'Accept']);
+      return res.json({ caserequestid: caseId, status: 'Accepted', message: result.rows[0].message });
+    } else if (status === 'Open' && remarks && remarks.includes('Reject')) {
+      const reason = remarks.replace('Rejected: ', '') || 'No reason provided';
+      if (doctoremployeeid) {
+        const result = await query('SELECT * FROM fn_accept_reject_case($1, $2, $3, $4)', [caseId, doctoremployeeid, 'Reject', reason]);
+        return res.json({ caserequestid: caseId, status: 'Open', message: result.rows[0].message });
+      }
+    }
+
     const fields = ['status', 'remarks', 'doctoremployeeid'];
     let updatePairs = [];
     let values = [];
     let idx = 1;
-    
+
     fields.forEach(field => {
       if (req.body[field] !== undefined) {
         updatePairs.push(`${field} = $${idx++}`);
@@ -123,12 +317,12 @@ router.patch('/cases/:id/status', async (req, res) => {
       return res.status(400).json({ message: 'No valid fields provided for update' });
     }
 
-    values.push(req.params.id);
+    values.push(caseId);
     const sql = `UPDATE caserequest SET ${updatePairs.join(', ')} WHERE caserequestid = $${idx} RETURNING *`;
-    
+
     const result = await query(sql, values);
     if (!result.rows[0]) return res.status(404).json({ message: 'Case not found' });
-    
+
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -136,13 +330,18 @@ router.patch('/cases/:id/status', async (req, res) => {
 router.post('/cases/diagnosis', async (req, res) => {
   try {
     const { caserequestid, diseaseid, severity, notes } = req.body;
+
+    // Get the assigned doctor for this case
+    const caseRes = await query('SELECT doctoremployeeid FROM caserequest WHERE caserequestid = $1', [caserequestid]);
+    if (caseRes.rows.length === 0 || !caseRes.rows[0].doctoremployeeid) {
+      return res.status(400).json({ error: 'Case not found or no doctor assigned.' });
+    }
+    const doctoremployeeid = caseRes.rows[0].doctoremployeeid;
+
+    // Call the database function
     const result = await query(
-      `INSERT INTO diagnosis (caserequestid, diseaseid, severity, notes) 
-       VALUES ($1, $2, $3, $4) 
-       ON CONFLICT (caserequestid, diseaseid) 
-       DO UPDATE SET severity = EXCLUDED.severity, notes = EXCLUDED.notes
-       RETURNING *`,
-      [caserequestid, diseaseid, severity, notes]
+      `SELECT * FROM fn_add_diagnosis($1, $2, $3, $4, $5)`,
+      [caserequestid, diseaseid, severity, notes, doctoremployeeid]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -156,7 +355,7 @@ router.post('/cases/prescription', async (req, res) => {
        VALUES ($1, $2, $3) 
        ON CONFLICT (caserequestid) 
        DO UPDATE SET medicines = EXCLUDED.medicines, instructions = EXCLUDED.instructions
-       RETURNING *`, 
+       RETURNING *`,
       [caserequestid, medicines, instructions]
     );
     res.status(201).json(result.rows[0]);
@@ -184,8 +383,8 @@ router.get('/lab-tests/queue', async (req, res) => {
     `;
     const params = [];
     if (req.query.assigneddeptid) {
-       sql += ` AND cr.assigneddeptid = $1`;
-       params.push(req.query.assigneddeptid);
+      sql += ` AND cr.assigneddeptid = $1`;
+      params.push(req.query.assigneddeptid);
     }
     sql += ' ORDER BY lr.orderedon ASC';
     const result = await query(sql, params);
@@ -195,13 +394,14 @@ router.get('/lab-tests/queue', async (req, res) => {
 
 router.get('/lab-tests/case/:id', async (req, res) => {
   try {
+    // Using vw_doctor_lab_reports view
     const result = await query(`
-      SELECT lr.*, lt.testname, lt.testcode, lt.unit, lt.normalrange, e.firstname as perf_first, e.lastname as perf_last
-      FROM labreport lr
-      JOIN labtest lt ON lr.labtestid = lt.labtestid
-      LEFT JOIN employee e ON lr.performedbyid = e.employeeid
-      WHERE lr.caserequestid = $1
-      ORDER BY lr.orderedon DESC
+      SELECT reportid, caserequestid, labtestid, testname, testcode, unit, normalrange,
+             testvalue, labstatus as status, orderedon, resultedon,
+             orderedby, performedby
+      FROM vw_doctor_lab_reports
+      WHERE caserequestid = $1
+      ORDER BY orderedon DESC
     `, [req.params.id]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -209,10 +409,10 @@ router.get('/lab-tests/case/:id', async (req, res) => {
 
 router.post('/lab-tests', async (req, res) => {
   try {
-    const { caserequestid, labtestid, patientid, orderedbyid } = req.body;
+    const { caserequestid, labtestid, orderedbyid } = req.body;
     const result = await query(
-      'INSERT INTO labreport (caserequestid, labtestid, patientid, orderedbyid, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [caserequestid, labtestid, patientid, orderedbyid, 'Ordered']
+      `SELECT * FROM fn_order_lab_test($1, $2, $3)`,
+      [caserequestid, labtestid, orderedbyid]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -224,24 +424,18 @@ router.patch('/lab-tests/:id', async (req, res) => {
     const reportId = req.params.id;
 
     const result = await query(
-      `UPDATE labreport 
-       SET testvalue = $1, performedbyid = $2, resultedon = NOW(), status = 'Resulted'::lab_status 
-       WHERE reportid = $3 RETURNING *`,
-      [testvalue || null, performedbyid || null, reportId]
+      `SELECT * FROM fn_nurse_fill_lab_report($1, $2, $3)`,
+      [reportId, performedbyid, testvalue]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Lab report not found' });
-    }
-
     res.json(result.rows[0]);
-  } catch (err) { 
+  } catch (err) {
     console.error('Server Lab Error:', err);
-    res.status(500).json({ 
-      error: err.message, 
+    res.status(500).json({
+      error: err.message,
       sqlState: err.code,
-      detail: 'If this is a constraint error, please check the console or types.' 
-    }); 
+      detail: 'If this is a constraint error, please check the console or types.'
+    });
   }
 });
 

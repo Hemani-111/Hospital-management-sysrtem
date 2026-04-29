@@ -204,7 +204,7 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION '%', SQLERRM;
 END;
-$$
+$$;
 
 CREATE OR REPLACE FUNCTION fn_create_case_request(
     -- Assessment details
@@ -638,155 +638,96 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    v_patient_exists    BOOLEAN;
-    v_employee_exists   BOOLEAN;
-    v_case_exists       BOOLEAN;
-    v_case_status       case_status;
-    v_patient_owns_case BOOLEAN;
-    v_doctor_in_case    BOOLEAN;
-    v_already_submitted BOOLEAN;
-    v_patient_name      VARCHAR;
-    v_employee_name     VARCHAR;
+    v_patient_exists        BOOLEAN;
+    v_employee_exists       BOOLEAN;
+    v_case_exists           BOOLEAN;
+    v_case_status           case_status;
+    v_patient_owns_case     BOOLEAN;
+    v_employee_in_case      BOOLEAN;
+    v_already_submitted     BOOLEAN;
+    v_patient_name          VARCHAR;
+    v_employee_name         VARCHAR;
+    v_employee_type         employee_type;
 BEGIN
-    -- ================================
     -- VALIDATION 1: Patient exists
-    -- ================================
-    SELECT EXISTS (
-        SELECT 1 FROM Patient
-        WHERE PatientID = p_patient_id
-    ) INTO v_patient_exists;
-
+    SELECT EXISTS (SELECT 1 FROM Patient WHERE PatientID = p_patient_id) INTO v_patient_exists;
     IF NOT v_patient_exists THEN
         RAISE EXCEPTION 'Patient with ID % does not exist', p_patient_id;
     END IF;
+    SELECT FirstName || ' ' || LastName INTO v_patient_name FROM Patient WHERE PatientID = p_patient_id;
 
-    -- Get patient name
-    SELECT FirstName || ' ' || LastName INTO v_patient_name
-    FROM Patient WHERE PatientID = p_patient_id;
-
-    -- ================================
     -- VALIDATION 2: Employee exists and is active
-    -- ================================
-    SELECT EXISTS (
-        SELECT 1 FROM Employee
-        WHERE EmployeeID = p_employee_id
-        AND IsActive = TRUE
-    ) INTO v_employee_exists;
-
+    SELECT EXISTS (SELECT 1 FROM Employee WHERE EmployeeID = p_employee_id AND IsActive = TRUE) INTO v_employee_exists;
     IF NOT v_employee_exists THEN
-        RAISE EXCEPTION 'Employee with ID % does not exist or is inactive',
-            p_employee_id;
+        RAISE EXCEPTION 'Employee with ID % does not exist or is inactive', p_employee_id;
     END IF;
+    SELECT FirstName || ' ' || LastName INTO v_employee_name FROM Employee WHERE EmployeeID = p_employee_id;
+    SELECT EmployeeType INTO v_employee_type FROM Employee WHERE EmployeeID = p_employee_id;
 
-    -- Get employee name
-    SELECT FirstName || ' ' || LastName INTO v_employee_name
-    FROM Employee WHERE EmployeeID = p_employee_id;
-
-    -- ================================
     -- VALIDATION 3: Case exists
-    -- ================================
-    SELECT EXISTS (
-        SELECT 1 FROM CaseRequest
-        WHERE CaseRequestID = p_case_request_id
-    ) INTO v_case_exists;
-
+    SELECT EXISTS (SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id) INTO v_case_exists;
     IF NOT v_case_exists THEN
-        RAISE EXCEPTION 'Case request with ID % does not exist',
-            p_case_request_id;
+        RAISE EXCEPTION 'Case request with ID % does not exist', p_case_request_id;
     END IF;
 
-    -- ================================
     -- VALIDATION 4: Case must be Resolved
-    -- ================================
-    SELECT Status INTO v_case_status
-    FROM CaseRequest
-    WHERE CaseRequestID = p_case_request_id;
-
+    SELECT Status INTO v_case_status FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
     IF v_case_status != 'Resolved' THEN
-        RAISE EXCEPTION 'Feedback can only be submitted for Resolved cases. Current status is %',
-            v_case_status;
+        RAISE EXCEPTION 'Feedback can only be submitted for Resolved cases. Current status is %', v_case_status;
     END IF;
 
-    -- ================================
     -- VALIDATION 5: Patient must belong to this case
-    -- ================================
     SELECT EXISTS (
-        SELECT 1 FROM CaseRequest
-        WHERE CaseRequestID = p_case_request_id
-        AND PatientID = p_patient_id
+        SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id AND PatientID = p_patient_id
     ) INTO v_patient_owns_case;
-
     IF NOT v_patient_owns_case THEN
-        RAISE EXCEPTION 'Patient % is not associated with case %',
-            v_patient_name, p_case_request_id;
+        RAISE EXCEPTION 'Patient % is not associated with case %', v_patient_name, p_case_request_id;
     END IF;
 
-    -- ================================
-    -- VALIDATION 6: Employee must be associated with this case
-    -- Either as doctor or nurse
-    -- ================================
+    -- VALIDATION 6: Employee must be the doctor or nurse of this case
     SELECT EXISTS (
         SELECT 1 FROM CaseRequest
         WHERE CaseRequestID = p_case_request_id
-        AND (
-            DoctorEmployeeID = p_employee_id
-            OR NurseEmployeeID = p_employee_id
-        )
-    ) INTO v_doctor_in_case;
-
-    IF NOT v_doctor_in_case THEN
-        RAISE EXCEPTION 'Employee % is not associated with case %',
-            v_employee_name, p_case_request_id;
+        AND (DoctorEmployeeID = p_employee_id OR NurseEmployeeID = p_employee_id)
+    ) INTO v_employee_in_case;
+    IF NOT v_employee_in_case THEN
+        RAISE EXCEPTION 'Employee % is not the doctor or nurse of case %', v_employee_name, p_case_request_id;
     END IF;
 
-    -- ================================
     -- VALIDATION 7: Rating must be between 1 and 5
-    -- ================================
-    IF p_rating IS NULL THEN
-        RAISE EXCEPTION 'Rating cannot be null';
-    END IF;
-
+    IF p_rating IS NULL THEN RAISE EXCEPTION 'Rating cannot be null'; END IF;
     IF p_rating < 1 OR p_rating > 5 THEN
         RAISE EXCEPTION 'Rating must be between 1 and 5, got: %', p_rating;
     END IF;
 
-    -- ================================
-    -- VALIDATION 8: Feedback already submitted
-    -- ================================
+    -- VALIDATION 8: Feedback already submitted for this case (one per patient per case)
     SELECT EXISTS (
         SELECT 1 FROM Feedback
-        WHERE PatientID     = p_patient_id
-        AND   EmployeeID    = p_employee_id
-        AND   CaseRequestID = p_case_request_id
+        WHERE PatientID = p_patient_id AND CaseRequestID = p_case_request_id
     ) INTO v_already_submitted;
-
     IF v_already_submitted THEN
-        RAISE EXCEPTION 'Feedback already submitted by patient % for employee % in case %',
-            v_patient_name, v_employee_name, p_case_request_id;
+        RAISE EXCEPTION 'Feedback already submitted by patient % for case %', v_patient_name, p_case_request_id;
     END IF;
 
-    -- ================================
-    -- INSERT FEEDBACK
-    -- ================================
+    -- INSERT FEEDBACK — route employee to the correct column based on their type
     INSERT INTO Feedback (
         PatientID,
-        EmployeeID,
         CaseRequestID,
+        DoctorEmployeeID,
+        NurseEmployeeID,
         Rating,
         Comment,
         CreatedOn
     ) VALUES (
         p_patient_id,
-        p_employee_id,
         p_case_request_id,
+        CASE WHEN v_employee_type = 'Doctor' THEN p_employee_id ELSE NULL END,
+        CASE WHEN v_employee_type = 'Nurse'  THEN p_employee_id ELSE NULL END,
         p_rating,
         TRIM(p_comment),
         NOW()
     );
 
-    -- ================================
-    -- RETURN SUCCESS
-    -- ================================
     RETURN QUERY
     SELECT
         p_patient_id,
@@ -802,7 +743,7 @@ EXCEPTION
 END;
 $$;
 
--- ==========================================
+-- ==========================================-- ==========================================
 -- BILLING AGGREGATION ENGINE
 -- ==========================================
 CREATE OR REPLACE FUNCTION fn_generate_bill(p_case_request_id INT)
@@ -827,7 +768,7 @@ DECLARE
     v_insurance_covered  DECIMAL := 0;
     v_final_amount       DECIMAL := 0;
     v_patient_ins_id     INT := NULL;
-    
+    v_coverage_percent   DECIMAL := 0;
     -- temporary vars for room tracking
     v_assessed_on        TIMESTAMP;
     v_room_price         DECIMAL;
@@ -864,13 +805,17 @@ BEGIN
     -- Base calculation
     v_total_amount := v_consultation_fee + v_lab_charges + v_room_charges + v_medicine_charges;
 
-    -- Insurance lookup
-    SELECT PatientInsuranceID INTO v_patient_ins_id
-    FROM PatientInsurance 
-    WHERE PatientID = v_patient_id AND Status = 'Active' LIMIT 1;
+    -- Dynamic Insurance lookup (uses patient's actual CoveragePercent)
+    SELECT PatientInsuranceID, CoveragePercent
+    INTO v_patient_ins_id, v_coverage_percent
+    FROM PatientInsurance
+    WHERE PatientID = v_patient_id AND Status = 'Active'
+    LIMIT 1;
 
     IF v_patient_ins_id IS NOT NULL THEN
-        v_insurance_covered := v_total_amount * 0.80; -- 80% coverage
+        v_insurance_covered := v_total_amount * (v_coverage_percent / 100.0);
+    ELSE
+        v_insurance_covered := 0;
     END IF;
 
     v_final_amount := v_total_amount - v_insurance_covered;
@@ -909,3 +854,167 @@ CREATE TRIGGER trg_free_room_on_resolution
 AFTER UPDATE OF Status ON CaseRequest
 FOR EACH ROW
 EXECUTE FUNCTION fn_free_room_on_resolve();
+
+
+-- ==========================================
+-- DOCTOR FUNCTION: ADD DIAGNOSIS
+-- ==========================================
+CREATE OR REPLACE FUNCTION fn_add_diagnosis(
+    p_case_request_id    INT,
+    p_disease_id         INT,
+    p_severity           severity_type,
+    p_notes              TEXT,
+    p_doctor_employee_id INT
+)
+RETURNS TABLE (
+    case_request_id INT,
+    disease_id      INT,
+    message         TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_case_exists       BOOLEAN;
+    v_disease_exists    BOOLEAN;
+    v_doctor_owns_case  BOOLEAN;
+    v_case_status       case_status;
+    v_already_diagnosed BOOLEAN;
+    v_disease_name      VARCHAR;
+BEGIN
+    SELECT EXISTS (SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id) INTO v_case_exists;
+    IF NOT v_case_exists THEN
+        RAISE EXCEPTION 'Case request % does not exist', p_case_request_id;
+    END IF;
+
+    SELECT Status INTO v_case_status FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    IF v_case_status NOT IN ('Accepted', 'InProgress') THEN
+        RAISE EXCEPTION 'Diagnosis can only be added to Accepted or InProgress cases. Current status: %', v_case_status;
+    END IF;
+
+    SELECT EXISTS (SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id AND DoctorEmployeeID = p_doctor_employee_id) INTO v_doctor_owns_case;
+    IF NOT v_doctor_owns_case THEN
+        RAISE EXCEPTION 'Doctor % is not assigned to case %', p_doctor_employee_id, p_case_request_id;
+    END IF;
+
+    SELECT EXISTS (SELECT 1 FROM Disease WHERE DiseaseID = p_disease_id) INTO v_disease_exists;
+    IF NOT v_disease_exists THEN
+        RAISE EXCEPTION 'Disease with ID % does not exist', p_disease_id;
+    END IF;
+    SELECT Name INTO v_disease_name FROM Disease WHERE DiseaseID = p_disease_id;
+
+    SELECT EXISTS (SELECT 1 FROM Diagnosis WHERE CaseRequestID = p_case_request_id AND DiseaseID = p_disease_id) INTO v_already_diagnosed;
+    IF v_already_diagnosed THEN
+        RAISE EXCEPTION 'Disease % already diagnosed for case %', v_disease_name, p_case_request_id;
+    END IF;
+
+    INSERT INTO Diagnosis (CaseRequestID, DiseaseID, Severity, Notes, DiagnosedOn)
+    VALUES (p_case_request_id, p_disease_id, p_severity, TRIM(p_notes), NOW());
+
+    UPDATE CaseRequest SET Status = 'InProgress'
+    WHERE CaseRequestID = p_case_request_id AND Status = 'Accepted';
+
+    RETURN QUERY SELECT p_case_request_id, p_disease_id,
+        ('Diagnosis added: ' || v_disease_name || ' (' || p_severity || ') for case ' || p_case_request_id)::TEXT;
+EXCEPTION WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+
+
+-- ==========================================
+-- DOCTOR FUNCTION: ORDER LAB TEST
+-- ==========================================
+CREATE OR REPLACE FUNCTION fn_order_lab_test(
+    p_case_request_id INT,
+    p_lab_test_id     INT,
+    p_ordered_by_id   INT
+)
+RETURNS TABLE (report_id INT, message TEXT)
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+    v_report_id        INT;
+    v_case_exists      BOOLEAN;
+    v_case_status      case_status;
+    v_doctor_owns_case BOOLEAN;
+    v_test_exists      BOOLEAN;
+    v_already_ordered  BOOLEAN;
+    v_test_name        VARCHAR;
+BEGIN
+    SELECT EXISTS (SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id) INTO v_case_exists;
+    IF NOT v_case_exists THEN RAISE EXCEPTION 'Case % does not exist', p_case_request_id; END IF;
+
+    SELECT Status INTO v_case_status FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    IF v_case_status NOT IN ('Accepted','InProgress') THEN
+        RAISE EXCEPTION 'Lab test can only be ordered for Accepted or InProgress cases';
+    END IF;
+
+    SELECT EXISTS (SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id AND DoctorEmployeeID = p_ordered_by_id) INTO v_doctor_owns_case;
+    IF NOT v_doctor_owns_case THEN
+        RAISE EXCEPTION 'Doctor % is not assigned to case %', p_ordered_by_id, p_case_request_id;
+    END IF;
+
+    SELECT EXISTS (SELECT 1 FROM LabTest WHERE LabTestID = p_lab_test_id) INTO v_test_exists;
+    IF NOT v_test_exists THEN RAISE EXCEPTION 'Lab test % does not exist', p_lab_test_id; END IF;
+    SELECT TestName INTO v_test_name FROM LabTest WHERE LabTestID = p_lab_test_id;
+
+    SELECT EXISTS (SELECT 1 FROM LabReport WHERE CaseRequestID = p_case_request_id AND LabTestID = p_lab_test_id) INTO v_already_ordered;
+    IF v_already_ordered THEN
+        RAISE EXCEPTION 'Lab test % already ordered for case %', v_test_name, p_case_request_id;
+    END IF;
+
+    INSERT INTO LabReport (CaseRequestID, LabTestID, PatientID, OrderedByID, Status, OrderedOn)
+    SELECT p_case_request_id, p_lab_test_id, cr.PatientID, p_ordered_by_id, 'Ordered', NOW()
+    FROM CaseRequest cr WHERE cr.CaseRequestID = p_case_request_id
+    RETURNING ReportID INTO v_report_id;
+
+    RETURN QUERY SELECT v_report_id,
+        ('Lab test ' || v_test_name || ' ordered successfully for case ' || p_case_request_id)::TEXT;
+EXCEPTION WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+
+
+-- ==========================================
+-- NURSE FUNCTION: FILL / RESULT A LAB REPORT
+-- ==========================================
+CREATE OR REPLACE FUNCTION fn_nurse_fill_lab_report(
+    p_report_id         INT,
+    p_nurse_employee_id INT,
+    p_test_value        VARCHAR
+)
+RETURNS TABLE (report_id INT, message TEXT)
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+    v_exists         BOOLEAN;
+    v_case_id        INT;
+    v_nurse_valid    BOOLEAN;
+    v_assigned_nurse INT;
+    v_status         lab_status;
+BEGIN
+    SELECT EXISTS (SELECT 1 FROM LabReport WHERE ReportID = p_report_id) INTO v_exists;
+    IF NOT v_exists THEN RAISE EXCEPTION 'Lab report % does not exist', p_report_id; END IF;
+
+    SELECT CaseRequestID, Status INTO v_case_id, v_status FROM LabReport WHERE ReportID = p_report_id;
+
+    SELECT EXISTS (SELECT 1 FROM Employee WHERE EmployeeID = p_nurse_employee_id AND EmployeeType = 'Nurse' AND IsActive = TRUE) INTO v_nurse_valid;
+    IF NOT v_nurse_valid THEN
+        RAISE EXCEPTION 'Employee % is not a valid active nurse', p_nurse_employee_id;
+    END IF;
+
+    SELECT NurseEmployeeID INTO v_assigned_nurse FROM CaseRequest WHERE CaseRequestID = v_case_id;
+    IF v_assigned_nurse IS NULL OR v_assigned_nurse != p_nurse_employee_id THEN
+        RAISE EXCEPTION 'Nurse % is not assigned to this case', p_nurse_employee_id;
+    END IF;
+
+    IF v_status = 'Resulted' THEN RAISE EXCEPTION 'Lab report already completed'; END IF;
+
+    UPDATE LabReport
+    SET TestValue = p_test_value, Status = 'Resulted', ResultedOn = NOW(), PerformedByID = p_nurse_employee_id
+    WHERE ReportID = p_report_id;
+
+    RETURN QUERY SELECT p_report_id, 'Lab report updated successfully by nurse'::TEXT;
+EXCEPTION WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
