@@ -85,15 +85,121 @@ No dropped balls. No spreadsheets. No whiteboards.
 
 ## 📸 Screenshots
 
-*(Add your screenshots of all pages here)*
-<!-- Example: ![Dashboard Screenshot](./path/to/screenshot.png) -->
+Explore the rich user interfaces and modules of **Aarogya HMS**, categorized by user portal.
+
+<details open>
+<summary>🏢 Admin Command Center (5 Screenshots)</summary>
+
+### 1. Admin Dashboard
+![Admin Dashboard](./screenshots/admin/dashboard.png)
+*A comprehensive visual overview of the hospital's operations, showing real-time metrics such as total revenue, patient inflow, and room occupancy (IPD vs. General) with interactive charts.*
+
+### 2. Patient Directory & List
+![Patient List](./screenshots/admin/patient%20list.png)
+*A unified directory of all patients registered in the database, allowing administrators to search, filter, and view patient profiles and clinical histories.*
+
+### 3. Patient Creation
+![Create Patient](./screenshots/admin/create%20patient.png)
+*The administrative registration interface to enroll new patients, capture demographic data, and generate secure one-time credentials for the Patient Portal.*
+
+### 4. Staff Management
+![Staff Management](./screenshots/admin/manage%20staff.png)
+*A role-based access control (RBAC) panel for administrators to manage, assign, and track doctors, nurses, and support staff across various departments.*
+
+### 5. Bill Management & Financial Engine
+![Bill Management](./screenshots/admin/bill%20management.png)
+*An automated ledger that compiles consultation fees, lab diagnostic tests, and room rentals into a comprehensive invoice, showing payment statuses and insurance calculations.*
+
+</details>
+
+<details>
+<summary>🩺 Doctor Portal (5 Screenshots)</summary>
+
+### 1. Doctor Dashboard
+![Doctor Dashboard](./screenshots/doctor/dashboard.png)
+*The practitioner's cockpit, presenting active patient counts, scheduled appointments, and pending diagnostics at a glance.*
+
+### 2. Appointment Scheduler
+![Appointments Manager](./screenshots/doctor/appointments.png)
+*A clean queue manager that allows doctors to track scheduled patient consultations, organize calendars, and launch diagnostics.*
+
+### 3. Active Case Tracker
+![My Cases](./screenshots/doctor/my%20cases.png)
+*A dedicated interface to manage active patient cases, track longitudinal medical history, and mark cases as resolved upon successful discharge.*
+
+### 4. Precision Diagnosis Form
+![Diagnosis Entry](./screenshots/doctor/diagnosis.png)
+*A detailed clinical form for selecting pre-configured ICD/disease items, assigning severity levels (Mild, Moderate, Severe), and documenting clinical notes.*
+
+### 5. Lab Orders & Digital Prescriptions
+![Lab Reports & Prescriptions](./screenshots/doctor/lab%20repors%20order.png)
+*An integrated interface to order medical lab tests and draft precise digital prescriptions (medication, dosage, and frequency instructions) for patients.*
+
+</details>
+
+<details>
+<summary>🥼 Nurse Clinical Portal (8 Screenshots)</summary>
+
+### 1. Nurse Dashboard
+![Nurse Dashboard](./screenshots/nurse/dashboard.png)
+*A centralized workspace indicating triage status, ward occupancy, active rooms, and pending assessments in real time.*
+
+### 2. Nurse Profile
+![Nurse Profile](./screenshots/nurse/profile.png)
+*A secure personal profile dashboard detailing active nursing credentials, assigned department, and roster shifts.*
+
+### 3. Patient Records Directory
+![Patient Records](./screenshots/nurse/patient%20records.png)
+*A focused, searchable patient lookup used by nurses to retrieve assigned ward charts and review current treatment plans.*
+
+### 4. Triage Assessments Log
+![Assessments Log](./screenshots/nurse/assessments.png)
+*A comprehensive record of previous clinical assessments and intake notes, displaying logs of patient updates.*
+
+### 5. Triage Check-in Flow
+![Triage Intake Form](./screenshots/nurse/assess%20patient%201.png)
+*The initial digital intake page used during patient triage to begin record creation and document chief complaints.*
+
+### 6. Vitals Entry Interface
+![Record Vitals](./screenshots/nurse/recrod%20vitals.png)
+*A precise clinical input screen to record core patient vitals, including Blood Pressure (Systolic/Diastolic), SpO₂ (Oxygen Saturation), Temperature (°F), and Respiratory Rate.*
+
+### 7. Vitals Monitor Dashboard
+![Vitals Monitor](./screenshots/nurse/vitals%20monitor.png)
+*A visual chart dashboard detailing patient vitals tracking over time, alerting staff to critical fluctuations.*
+
+### 8. Department Referrals
+![Department Referral](./screenshots/nurse/dept%20referal.png)
+*An administrative routing tool that lets nurses refer patients to other departments or rooms based on updated triage results.*
+
+</details>
+
+<details>
+<summary>👤 Patient Self-Service Portal (3 Screenshots)</summary>
+
+### 1. Patient Invoices & Billing
+![Bills Overview](./screenshots/patient/bills.png)
+*A clean invoice breakdown for the patient, showing billing line-items, insurance discounts, copays, and payment receipts.*
+
+### 2. Patient Feedback & Rating Form
+![Feedback Module](./screenshots/patient/feedback.png)
+*An interactive feedback widget enabling patients to rate their primary care doctors and nurses, promoting continuous improvement in care.*
+
+### 3. Patient Support Helpdesk
+![Support Portal](./screenshots/patient/support.png)
+*A secure patient support terminal containing hospital FAQs, direct query inputs, and messaging for non-emergency assistance.*
+
+</details>
 
 ---
 
 ## 📊 Relational Model
 
-*(Add your relational model diagram here)*
-<!-- Example: ![Relational Model](./path/to/model.png) -->
+The database entity relationships, schema layout, and table constraints of the Aarogya HMS system are fully documented in the relational model schema sheet:
+
+📁 **[View / Download Relational Model PDF](./relational%20model.pdf)**
+
+*This document contains detailed information on primary/foreign key mappings, attribute data types, check constraints, default triggers, and cascading referential integrity rules implemented at the PostgreSQL database level.*
 
 ---
 
