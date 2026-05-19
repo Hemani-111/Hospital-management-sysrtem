@@ -28,6 +28,10 @@
 }
 
 @layer base {
+  html {
+    @apply text-[75%] sm:text-[85%] md:text-[100%];
+  }
+  
   body {
     @apply bg-background-light dark:bg-background-dark font-body antialiased text-slate-800 dark:text-slate-100 selection:bg-primary/20;
     font-feature-settings: "tnum" 1, "lnum" 1;

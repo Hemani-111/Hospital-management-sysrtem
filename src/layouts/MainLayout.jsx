@@ -20,14 +20,14 @@ const MainLayout = ({ children, hidePadding, title }) => {
       </div>
       
       <div className="flex-1 flex flex-col min-h-screen relative md:ml-64 transition-all duration-300">
-        <div className="print:hidden">
+        <div className="print:hidden sticky top-0 z-40">
           <Header 
             title={title || "Hospital Management"} 
             onMenuClick={() => setIsSidebarOpen(true)} 
           />
         </div>
         
-        <main className={`flex-1 flex flex-col ${hidePadding ? '' : 'p-4 md:p-8'}`}>
+        <main className={`flex-1 flex flex-col ${hidePadding ? '' : 'p-4 md:p-8'} animate-in fade-in duration-500`}>
           {children}
         </main>
       </div>

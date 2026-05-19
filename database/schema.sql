@@ -131,7 +131,7 @@ CREATE TABLE Patient (
     DateOfBirth      DATE,
     Gender           gender_type,
     PhoneNumber      VARCHAR(15),
-    EmergencyContact VARCHAR(15),
+    EmergencyContact VARCHAR(100),
     BloodGroup       blood_group,
     Height           DECIMAL(5,2),
     Weight           DECIMAL(5,2),
@@ -387,6 +387,7 @@ CREATE TABLE Feedback (
 );
 
 
+
 -- ======================
 -- INDEXES
 -- ======================
@@ -407,3 +408,13 @@ CREATE INDEX idx_bill_paymentstatus  ON Bill(PaymentStatus);
 
 CREATE INDEX idx_feedback_doctor ON Feedback(DoctorEmployeeID);
 CREATE INDEX idx_feedback_nurse  ON Feedback(NurseEmployeeID);
+
+
+-- DROP old
+ALTER TABLE Bill DROP CONSTRAINT bill_check;
+
+-- ADD new with Discount
+ALTER TABLE Bill ADD CONSTRAINT bill_check
+CHECK (TotalAmount = ConsultationFee + RoomCharges 
+                   + LabCharges + MedicineCharges + OtherCharges
+                   - Discount);

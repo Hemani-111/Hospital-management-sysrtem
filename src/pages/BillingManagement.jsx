@@ -61,6 +61,15 @@ const BillingManagement = () => {
     onSuccess: () => queryClient.invalidateQueries(['all-bills']),
   });
 
+  const discountMutation = useMutation({
+    mutationFn: ({ id, discount }) => billingService.updatePayment(id, { discount }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['all-bills']);
+      addToast('Discount applied successfully!', 'success');
+    },
+    onError: (err) => addToast(`Error applying discount: ${err.message}`, 'error')
+  });
+
   const paid    = bills.filter(b => b.paymentstatus === 'Paid').reduce((s, b) => s + parseFloat(b.totalamount || 0), 0);
   const pending = bills.filter(b => b.paymentstatus === 'Pending').reduce((s, b) => s + parseFloat(b.totalamount || 0), 0);
   const partial = bills.filter(b => b.paymentstatus === 'Partial').reduce((s, b) => s + parseFloat(b.totalamount || 0), 0);
@@ -249,7 +258,27 @@ const BillingManagement = () => {
                                   <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Total Amount</p>
                                   <p className="text-5xl font-black text-primary">₹{parseFloat(inv.totalamount).toLocaleString()}</p>
                                 </div>
-                                <div className="flex gap-4 justify-end">
+                                <div className="flex gap-4 justify-end items-center">
+                                  <div className="relative group">
+                                    <input 
+                                      type="number" 
+                                      placeholder="Discount"
+                                      id={`discount-${inv.billid}`}
+                                      className="w-32 px-4 py-2 text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    />
+                                    <button 
+                                      onClick={() => {
+                                        const disc = document.getElementById(`discount-${inv.billid}`).value;
+                                        if (disc !== '') {
+                                          discountMutation.mutate({ id: inv.billid, discount: parseFloat(disc) });
+                                        }
+                                      }}
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                    >
+                                      <span className="material-symbols-outlined text-sm font-black">sell</span>
+                                    </button>
+                                  </div>
+
                                   {inv.paymentstatus !== 'Paid' && (
                                     <button
                                       onClick={() => markPaidMutation.mutate(inv.billid)}

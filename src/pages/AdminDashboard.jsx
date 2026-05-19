@@ -83,8 +83,8 @@ const AdminDashboard = () => {
           <div className="lg:col-span-2 glass-morphism rounded-[2.5rem] border border-white/20 p-8">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-xl font-black tracking-tight">Financial & Patient Flow</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Last 6 Months Snapshot</p>
+                <h3 className="text-lg md:text-xl font-black tracking-tight leading-none">Financial & Patient Flow</h3>
+                <p className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Last 6 Months Snapshot</p>
               </div>
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
@@ -169,8 +169,8 @@ const AdminDashboard = () => {
 
           {/* Room Occupancy Pie Chart */}
           <div className="glass-morphism rounded-[2.5rem] border border-white/20 p-8 flex flex-col items-center">
-            <h3 className="text-xl font-black tracking-tight self-start">Bed Occupancy</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 self-start mb-4">Real-time status</p>
+            <h3 className="text-lg md:text-xl font-black tracking-tight self-start leading-none">Bed Occupancy</h3>
+            <p className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 self-start mb-4">Real-time status</p>
             
             <div className="h-[250px] w-full">
               {loadAnalytics ? (
@@ -205,15 +205,15 @@ const AdminDashboard = () => {
           <section className="lg:col-span-2 grow flex flex-col glass-morphism rounded-[2.5rem] border border-white/20 dark:border-slate-800/20 shadow-premium overflow-hidden min-h-[500px]">
             <div className="p-8 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-black tracking-tighter flex items-center gap-3">
-                  <span className="size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shadow-inner">
-                    <span className="material-symbols-outlined">clinical_notes</span>
+                <h3 className="text-lg md:text-2xl font-black tracking-tighter flex items-center gap-2 md:gap-3 leading-none">
+                  <span className="size-7 md:size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shadow-inner">
+                    <span className="material-symbols-outlined text-sm md:text-xl">clinical_notes</span>
                   </span>
                   Emergency Triage
                 </h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Active Cases Dashboard</p>
+                <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">Active Cases Dashboard</p>
               </div>
-              <button onClick={() => navigate('/patient_list')} className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-all border border-primary/10">View Full Registry</button>
+              <button onClick={() => navigate('/patient_list')} className="px-3 md:px-5 py-2 md:py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-all border border-primary/10">FULL Registry</button>
             </div>
             <div className="flex-1 overflow-x-auto no-scrollbar">
               <table className="w-full text-left min-w-[700px]">
@@ -289,14 +289,14 @@ const AdminDashboard = () => {
 
           {/* Department Overview */}
           <div className="lg:col-span-1 flex flex-col glass-morphism-heavy rounded-[2.5rem] border border-white/30 dark:border-slate-800/30 overflow-hidden">
-            <div className="p-8 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
-              <h2 className="text-2xl font-black tracking-tighter flex items-center gap-3">
-                <span className="size-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shadow-inner">
-                  <span className="material-symbols-outlined text-amber-600 text-xl">domain</span>
+            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
+              <h2 className="text-xl md:text-2xl font-black tracking-tighter flex items-center gap-2 md:gap-3 leading-none">
+                <span className="size-8 md:size-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shadow-inner">
+                  <span className="material-symbols-outlined text-amber-600 text-base md:text-xl">domain</span>
                 </span>
                 Wards
               </h2>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Operational</span>
+              <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Operational</span>
             </div>
             <div className="p-6 flex-1 space-y-6 overflow-y-auto max-h-[500px] no-scrollbar">
               {loadDepts ? (

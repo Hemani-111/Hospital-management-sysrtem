@@ -1,0 +1,2476 @@
+\documentclass{article}
+\usepackage{lmodern}
+
+% ─── PACKAGES ────────────────────────────────────────────────────────────────
+\usepackage[a4paper, top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb}
+\usepackage{pifont}
+\newcommand{\yes}{\textcolor{codegreen}{\ding{51}}}
+\newcommand{\no}{\textcolor{red!60!black}{\ding{55}}}
+% ─── COLORS ──────────────────────────────────────────────────────────────────
+\definecolor{primaryblue}{RGB}{30, 78, 121}
+\definecolor{secondaryblue}{RGB}{46, 117, 182}
+\definecolor{tableheader}{RGB}{30, 78, 121}
+\definecolor{tablerowA}{RGB}{255, 255, 255}
+\definecolor{tablerowB}{RGB}{242, 248, 255}
+\definecolor{codebg}{RGB}{248, 248, 248}
+\definecolor{codegreen}{RGB}{0, 128, 0}
+\definecolor{codegray}{RGB}{128, 128, 128}
+\definecolor{codepurple}{RGB}{148, 0, 211}
+\definecolor{codeblue}{RGB}{0, 0, 200}
+\definecolor{sectioncolor}{RGB}{30, 78, 121}
+\definecolor{placeholderbg}{RGB}{240, 240, 240}
+\definecolor{placeholderborder}{RGB}{180, 180, 180}
+
+% ─── SECTION FORMATTING ───────────────────────────────────────────────────────
+\titleformat{\section}
+  {\Large\bfseries\color{sectioncolor}}
+  {\thesection.}{0.5em}{}[\vspace{-4pt}\rule{\linewidth}{1.5pt}]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{secondaryblue}}
+  {\thesubsection.}{0.5em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{secondaryblue}}
+  {\thesubsubsection.}{0.5em}{}
+
+% ─── HEADER / FOOTER ─────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{secondaryblue}{Hospital Management System}}
+\fancyhead[R]{\small\textcolor{secondaryblue}{DS3020 Endterm Project Report}}
+\fancyfoot[C]{\small\textcolor{gray}{\thepage}}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\headrule}{{\color{secondaryblue}\hrule width\headwidth height\headrulewidth}}
+\renewcommand{\footrulewidth}{0pt}
+
+% ─── CODE STYLE ──────────────────────────────────────────────────────────────
+\lstdefinestyle{sqlstyle}{
+  language=SQL,
+  backgroundcolor=\color{codebg},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{codeblue}\bfseries,
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\small,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  numberstyle=\tiny\color{codegray},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{placeholderborder},
+  xleftmargin=10pt,
+  xrightmargin=5pt,
+  morekeywords={RETURNS, LANGUAGE, plpgsql, DECLARE, BEGIN, END, RETURN,
+                QUERY, COALESCE, SERIAL, BOOLEAN, TIMESTAMP, DECIMAL,
+                VARCHAR, SMALLINT, JSONB, TIME, DATE, ENUM, TEXT,
+                CREATE, TYPE, AS, IF, THEN, ELSIF, ELSE, LOOP,
+                INTO, FROM, WHERE, AND, OR, NOT, NULL, TRUE, FALSE,
+                DEFAULT, UNIQUE, CHECK, REFERENCES, PRIMARY, KEY,
+                FOREIGN, CONSTRAINT, INDEX, ON, INSERT, UPDATE,
+                SELECT, DELETE, TABLE, FUNCTION, REPLACE}
+}
+\lstset{style=sqlstyle}
+
+% ─── PLACEHOLDER BOX ─────────────────────────────────────────────────────────
+% FIX 1: \placeholder was used but never defined in the updated code
+\newcommand{\placeholder}[2][1cm]{%
+  \vspace{0.3cm}%
+  \noindent\fcolorbox{placeholderborder}{placeholderbg}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+      \centering\vspace{#1}\textcolor{gray}{\textit{#2}}\vspace{#1}%
+    }%
+  }%
+  \vspace{0.3cm}%
+}
+
+% ─── TABLE HELPERS ───────────────────────────────────────────────────────────
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+% \rowcolor must be placed FIRST on the row (before any & separators)
+% \theadcell is applied per-cell for color and bold only
+\newcommand{\theadcell}{\color{white}\bfseries}
+
+% ─── HYPERREF SETUP ──────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=secondaryblue,
+  urlcolor=secondaryblue,
+  citecolor=secondaryblue,
+  pdftitle={Hospital Management System - DBMS Report},
+  pdfauthor={DBMS Project Team}
+}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\begin{document}
+% ═════════════════════════════════════════════════════════════════════════════
+
+% ─── COVER PAGE ──────────────────────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{1.2cm}
+  {\fontsize{16}{20}\selectfont\bfseries\color{secondaryblue}
+    Indian Institute of Technology Palakkad}\\[0.6cm]
+  \rule{\linewidth}{2pt}\\[0.8cm]
+  {\fontsize{28}{36}\selectfont\bfseries\color{primaryblue}
+    Hospital Management System}\\[0.4cm]
+  {\fontsize{18}{24}\selectfont\bfseries\color{secondaryblue}
+    Endterm Project Report}\\[0.3cm]
+  \rule{\linewidth}{2pt}\\[1.0cm]
+  {\large
+  \begin{tabular}{L{5cm} L{8cm}}
+    \textbf{\color{primaryblue}Course:}     & DS3020 Database Systems \\[0.4cm]
+    \textbf{\color{primaryblue}Instructor:} & Koninika Pal \\[0.4cm]
+  \end{tabular}
+  }
+
+  \vspace{1.2cm}
+  {\large\bfseries\color{primaryblue} Project Team}\\[0.5cm]
+
+  \begin{tabular}{L{7cm} C{4cm}}
+    \rowcolor{tableheader} \theadcell Name & \theadcell Roll Number \\
+    \rowcolor{tablerowA} Sai Kiran  & 142401034 \\
+    \rowcolor{tablerowB} Hemani     & 142401043 \\
+    \rowcolor{tablerowA} Vaishnavi  & 142401036 \\
+  \end{tabular}
+
+  \vspace{1cm}
+
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{front image.png}    
+  \end{figure}
+
+
+  \vfill
+\end{titlepage}
+
+% ─── TABLE OF CONTENTS ───────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Project Overview}
+% ═════════════════════════════════════════════════════════════════════════════
+
+This report documents the database schema for the \textbf{Hospital Management System}, designed and implemented using PostgreSQL. The system manages the complete lifecycle of patient care from initial registration through treatment, billing, and discharge.
+
+\subsection{User Roles}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Admin} --- Creates patient records, manages staff, assigns cases to departments, manages rooms, and generates bills.
+  \item \textbf{Doctor} --- Views open case requests assigned to their department, accepts or rejects cases, writes diagnoses, prescriptions, and orders lab tests.
+  \item \textbf{Nurse} --- Performs initial patient assessments and records vitals.
+  \item \textbf{Patient} --- Self-registers using a signup code, views appointments, lab reports, prescriptions, diagnoses, and bills.
+\end{itemize}
+
+\subsection{Technology Stack}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+
+\begin{tabular}{L{4cm} L{9cm}}
+  \rowcolor{tableheader} \theadcell Layer & \theadcell Technology \\
+  \rowcolor{tablerowA} Database       & PostgreSQL 15+ with ENUM types, foreign key constraints, and CHECK constraints \\
+  \rowcolor{tablerowB} Backend        & Node.js (Express.js REST API) \\
+  \rowcolor{tablerowA} Frontend       & React.js with HTML5 and CSS3 \\
+  \rowcolor{tablerowB} Authentication & JWT (JSON Web Tokens) with bcrypt password hashing \\
+\end{tabular}
+
+\end{center}
+
+\newpage
+% ═════════════════════════════════════════════════════════════════════════════
+\section{System Architecture}
+% ═════════════════════════════════════════════════════════════════════════════
+
+The Hospital Management System follows a standard \textbf{three-tier architecture}, ensuring strict separation between the presentation layer, the application logic, and the data persistence layer. This design allows for modular development and ensures that the core business logic is centralized within the database functions.
+
+\subsection{Workflow Diagram}
+
+The following diagram illustrates the interaction between system actors, the React-based frontend, the Node.js API, and the PostgreSQL database artifacts (Views, Functions, and Tables).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{workflow_2.png}    
+\end{figure}
+
+\subsection{Architectural Components}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{Presentation Layer}: Handles role-based navigation and user interaction.
+    \item \textbf{Backend Layer}: Manages authentication and serves as an interface between the frontend and the database.
+    \item \textbf{Persistence Layer}: Enforces data integrity and business rules at the core database level.
+\end{itemize}
+
+\newpage
+% ═════════════════════════════════════════════════════════════════════════════
+\section{ER Diagram}
+% ═════════════════════════════════════════════════════════════════════════════
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{ER.png}
+  \caption{Entity-Relationship Diagram --- Hospital Management System}
+\end{figure}
+
+\subsection{Entity Descriptions}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{User} --- Stores login and authentication details for all system users.
+  \item \textbf{Employee} --- Represents hospital staff with personal and job-related information.
+  \item \textbf{Patient} --- Stores personal and medical details of patients.
+  \item \textbf{Department} --- Represents hospital departments (Cardiology, Neurology, etc.).
+  \item \textbf{Room} --- Stores hospital room availability and pricing for patient admission.
+  \item \textbf{DoctorProfile} --- Extended profile including specialization and qualifications.
+  \item \textbf{Address} --- Shared address entity for patients and employees.
+  \item \textbf{PatientInsurance} --- Stores insurance policy details related to patients.
+  \item \textbf{Disease} --- Master list of medical conditions identified during diagnosis.
+  \item \textbf{PatientAssessment} --- Nurse's initial evaluation including vitals and symptoms.
+  \item \textbf{CaseRequest} --- Core entity representing the complete lifecycle of a medical case.
+  \item \textbf{Appointment} --- Manages scheduling of visits between patients and doctors.
+  \item \textbf{Prescription} --- Records medicines and treatment instructions prescribed by doctors.
+  \item \textbf{LabReport} --- Stores laboratory test results ordered for patients.
+  \item \textbf{Bill} --- Maintains itemised billing details for medical services.
+  \item \textbf{Feedback} --- Stores patient feedback and ratings about hospital services.
+\end{enumerate}
+
+\subsection{Key Relationships}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} C{2cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Relationship & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} User $\to$ Employee              & 1:1 & One User account per staff member \\
+  \rowcolor{tablerowB} User $\to$ Patient               & 1:1 & One User account per patient \\
+  \rowcolor{tablerowA} Department $\to$ Room            & 1:N & One department has many rooms \\
+  \rowcolor{tablerowB} Department $\to$ Employee        & 1:N & One department has many employees \\
+  \rowcolor{tablerowA} Employee $\to$ DoctorProfile     & 1:1 & One doctor has one extended profile \\
+  \rowcolor{tablerowB} Patient $\to$ CaseRequest        & 1:N & One patient can have many cases \\
+  \rowcolor{tablerowA} PatientAssessment $\to$ CaseRequest & 1:1 & Each assessment triggers one case \\
+  \rowcolor{tablerowB} CaseRequest $\to$ Appointment    & 1:N & One case can have many appointments \\
+  \rowcolor{tablerowA} CaseRequest $\to$ Disease      & M:N & One case can have many disease and multiple cases may have same disease \\
+  \rowcolor{tablerowB} CaseRequest $\to$ Bill           & 1:1 & Each resolved case generates one bill \\
+  \rowcolor{tablerowB} Insurance $\to$ Bill      & 1:N & Insurance can cover multiple bills \\
+\end{tabular}
+\end{center}
+
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Relational Model}
+% ═════════════════════════════════════════════════════════════════════════════
+
+The Relational Model below shows all 17 tables with primary keys, foreign keys, and inter-table relationships as implemented in PostgreSQL.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{relational_schema_final.pdf}
+  \caption{Relational Model --- Hospital Management System}
+\end{figure}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{General Constraints}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Primary Key (PK)}
+A Primary Key uniquely identifies each record in a table. Every table has a \texttt{SERIAL} primary key that auto-increments.
+
+\begin{center}
+\begin{tabular}{L{5cm} L{8cm}}
+  \rowcolor{tableheader} \theadcell Table & \theadcell Primary Key \\
+  \rowcolor{tablerowA} User              & UserID \\
+  \rowcolor{tablerowB} Employee          & EmployeeID \\
+  \rowcolor{tablerowA} Patient           & PatientID \\
+  \rowcolor{tablerowB} DoctorProfile     & EmployeeID \\
+  \rowcolor{tablerowA} Department        & DepartmentID \\
+  \rowcolor{tablerowB} Room              & RoomID \\
+  \rowcolor{tablerowA} CaseRequest       & CaseRequestID \\
+  \rowcolor{tablerowB} PatientAssessment & AssessmentID \\
+  \rowcolor{tablerowA} Appointment       & AppointmentID \\
+  \rowcolor{tablerowA} Prescription      & PrescriptionID \\
+  \rowcolor{tablerowB} LabReport         & ReportID \\
+  \rowcolor{tablerowA} Bill              & BillID \\
+  \rowcolor{tablerowB} Insurance  & InsuranceID \\
+  \rowcolor{tablerowA} Disease           & DiseaseID \\
+\end{tabular}
+\end{center}
+
+\subsection{Foreign Key (FK)}
+Foreign keys maintain referential integrity between related tables.
+
+\begin{center}
+\begin{tabular}{L{5.5cm} L{7cm}}
+  \rowcolor{tableheader} \theadcell Foreign Key Column & \theadcell References \\
+  \rowcolor{tablerowA} Patient.UserID               & User(UserID) \\
+  \rowcolor{tablerowB} Employee.UserID              & User(UserID) \\
+  \rowcolor{tablerowA} DoctorProfile.EmployeeID     & Employee(EmployeeID) \\
+  \rowcolor{tablerowB} Room.DepartmentID            & Department(DepartmentID) \\
+  \rowcolor{tablerowA} Employee.DepartmentID        & Department(DepartmentID) \\
+  \rowcolor{tablerowB} CaseRequest.PatientID        & Patient(PatientID) \\
+  \rowcolor{tablerowA} CaseRequest.AssessmentID     & PatientAssessment(AssessmentID) \\
+  \rowcolor{tablerowB} CaseRequest.AssignedDeptID   & Department(DepartmentID) \\
+  \rowcolor{tablerowA} CaseRequest.DoctorEmployeeID & Employee(EmployeeID) \\
+  \rowcolor{tablerowB} Appointment.CaseRequestID    & CaseRequest(CaseRequestID) \\
+  \rowcolor{tablerowA} Diagnosis.CaseRequestID      & CaseRequest(CaseRequestID) \\
+  \rowcolor{tablerowB} Diagnosis.DiseaseID          & Disease(DiseaseID) \\
+  \rowcolor{tablerowA} Prescription.CaseRequestID   & CaseRequest(CaseRequestID) \\
+  \rowcolor{tablerowB} LabReport.CaseRequestID      & CaseRequest(CaseRequestID) \\
+  \rowcolor{tablerowA} Bill.CaseRequestID           & CaseRequest(CaseRequestID) \\
+  \rowcolor{tablerowB} Bill.PatientInsuranceID      & Insurance(InsuranceID) \\
+  \rowcolor{tablerowA} Insurance.PatientID   & Patient(PatientID) \\
+  \rowcolor{tablerowA} Feedback.PatientID           & Patient(PatientID) \\
+  \rowcolor{tablerowB} Feedback.EmployeeID          & Employee(EmployeeID) \\
+\end{tabular}
+\end{center}
+
+\subsection{NOT NULL Constraint}
+Ensures important attributes always contain a value.
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{User.Email}, \texttt{User.PasswordHash}, \texttt{User.Role}
+  \item \texttt{Patient.FirstName}, \texttt{Patient.LastName}
+  \item \texttt{Employee.FirstName}, \texttt{Employee.DepartmentID}
+  \item \texttt{Department.Name}
+  \item \texttt{CaseRequest.CaseSummary}, \texttt{CaseRequest.PatientID}
+\end{itemize}
+
+\subsection{UNIQUE Constraint}
+Ensures no duplicate values are stored in specific columns.
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{User.Email} --- each user must have a unique email
+  \item \texttt{Employee.UserID} --- one user account per employee
+  \item \texttt{Patient.UserID} --- one user account per patient
+  \item \texttt{DoctorProfile.LicenseNumber} --- globally unique license
+  \item \texttt{Room.RoomNumber} --- unique room identifier
+  \item \texttt{Appointment(DoctorEmployeeID, AppointmentDate, StartTime)} --- prevents double booking
+  \item \texttt{Feedback(PatientID, CaseRequestID, EmployeeID)} --- one feedback per case per employee
+\end{itemize}
+
+\subsection{CHECK Constraint}
+Ensures columns contain only valid values.
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{User.Role IN ('patient','doctor','nurse','admin')}
+  \item \texttt{Feedback.Rating BETWEEN 1 AND 5}
+  \item \texttt{Bill.Discount >= 0}
+  \item \texttt{Bill.InsuranceCovered >= 0}
+  \item \texttt{Bill.TotalAmount >= 0}
+  \item \texttt{Bill.TotalAmount = ConsultationFee + RoomCharges + LabCharges + MedicineCharges + OtherCharges - Discount}
+\end{itemize}
+
+\subsection{DEFAULT Constraint}
+Provides default values when none are explicitly given.
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{User.IsActive = TRUE}
+  \item \texttt{CreatedOn = CURRENT\_TIMESTAMP}
+  \item \texttt{CaseRequest.Status = 'Open'}
+  \item \texttt{CaseRequest.IsAdmitted = FALSE}
+  \item \texttt{Bill.PaymentStatus = 'Pending'}
+  \item \texttt{LabReport.Status = 'Ordered'}
+  \item \texttt{LabReport.IsBilled = FALSE}
+\end{itemize}
+
+\subsection{ENUM Types}
+PostgreSQL custom ENUM types enforce valid values at the database level.
+
+\begin{center}
+\begin{tabular}{L{4cm} L{9cm}}
+  \rowcolor{tableheader} \theadcell ENUM Type & \theadcell Allowed Values \\
+  \rowcolor{tablerowA} user\_role          & patient, doctor, nurse, admin \\
+  \rowcolor{tablerowB} room\_type          & General, Private, ICU, Emergency \\
+  \rowcolor{tablerowA} employee\_type      & Doctor, Nurse, Admin \\
+  \rowcolor{tablerowB} case\_status        & Open, Accepted, Rejected, InProgress, Resolved, Cancelled \\
+  \rowcolor{tablerowA} appointment\_status & Scheduled, Completed, Cancelled, NoShow \\
+  \rowcolor{tablerowB} lab\_status         & Ordered, Processing, Resulted \\
+  \rowcolor{tablerowA} payment\_status     & Pending, Partial, Paid, Waived \\
+  \rowcolor{tablerowB} severity\_type      & Mild, Moderate, Severe \\
+  \rowcolor{tablerowA} gender\_type        & Male, Female, Other \\
+  \rowcolor{tablerowB} blood\_group        & A+, A-, B+, B-, AB+, AB-, O+, O- \\
+  \rowcolor{tablerowA} condition\_type    & Stable, Fair, Serious, Critical \\
+  \rowcolor{tablerowB} case\_urgency      & Normal, Urgent, Emergency \\
+\end{tabular}
+\end{center}
+
+═════════════════════════════════════════════════════════════════════════════
+\section{PostgreSQL Functions}
+% ═════════════════════════════════════════════════════════════════════════════
+
+
+Two PostgreSQL functions have been implemented to automate key operations in the Hospital Management System.
+% ============================================================
+% FUNCTION 1: fn_register_patient
+% ============================================================
+
+\subsection{Function 1: \texttt{fn\_register\_patient(...)}}
+
+\subsubsection{Description}
+This function registers a new patient into the system. It validates the admin's identity and type, verifies all patient details (name, date of birth, phone, emergency contact, height, weight, address), generates a unique signup code, and inserts the patient record. The function returns a table with columns: \texttt{patient\_id}, \texttt{signup\_code}, \texttt{message}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_first\_name & VARCHAR & Patient's first name \\
+  \rowcolor{tablerowB} p\_last\_name & VARCHAR & Patient's last name \\
+  \rowcolor{tablerowA} p\_date\_of\_birth & DATE & Patient's date of birth (cannot be future or null) \\
+  \rowcolor{tablerowB} p\_gender & gender\_type & Patient's gender (enum type) \\
+  \rowcolor{tablerowA} p\_phone\_number & VARCHAR & 10-digit phone number \\
+  \rowcolor{tablerowB} p\_emergency\_contact & VARCHAR & 10-digit emergency contact (must differ from phone) \\
+  \rowcolor{tablerowA} p\_blood\_group & blood\_group & Patient's blood group (enum type) \\
+  \rowcolor{tablerowB} p\_height & DECIMAL & Height in cm (0--300, optional) \\
+  \rowcolor{tablerowA} p\_weight & DECIMAL & Weight in kg (0--500, optional) \\
+  \rowcolor{tablerowB} p\_address\_line1 & VARCHAR & Primary address line \\
+  \rowcolor{tablerowA} p\_address\_line2 & VARCHAR & Secondary address line (optional) \\
+  \rowcolor{tablerowB} p\_city & VARCHAR & City (cannot be empty) \\
+  \rowcolor{tablerowA} p\_state & VARCHAR & State (cannot be empty) \\
+  \rowcolor{tablerowB} p\_postal\_code & VARCHAR & Postal/ZIP code \\
+  \rowcolor{tablerowA} p\_country & VARCHAR & Country \\
+  \rowcolor{tablerowB} p\_created\_by\_admin\_id & INT & EmployeeID of the Admin creating the record \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_register_patient(
+    p_first_name            VARCHAR,
+    p_last_name             VARCHAR,
+    p_date_of_birth         DATE,
+    p_gender                gender_type,
+    p_phone_number          VARCHAR,
+    p_emergency_contact     VARCHAR,
+    p_blood_group           blood_group,
+    p_height                DECIMAL,
+    p_weight                DECIMAL,
+    p_address_line1         VARCHAR,
+    p_address_line2         VARCHAR,
+    p_city                  VARCHAR,
+    p_state                 VARCHAR,
+    p_postal_code           VARCHAR,
+    p_country               VARCHAR,
+    p_created_by_admin_id   INT
+)
+RETURNS TABLE (
+    patient_id  INT,
+    signup_code VARCHAR,
+    message     TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_patient_id    INT;
+    v_signup_code   VARCHAR;
+    v_admin_exists  BOOLEAN;
+    v_admin_type    employee_type;
+    v_seq_val       INT;
+BEGIN
+    -- VALIDATION 1: Admin exists and is active
+    SELECT EXISTS (
+        SELECT 1 FROM Employee
+        WHERE EmployeeID = p_created_by_admin_id
+        AND IsActive = TRUE
+    ) INTO v_admin_exists;
+
+    IF NOT v_admin_exists THEN
+        RAISE EXCEPTION 'Admin with ID % does not exist or is inactive',
+            p_created_by_admin_id;
+    END IF;
+
+    -- VALIDATION 2: Admin must be Admin type employee
+    SELECT EmployeeType INTO v_admin_type
+    FROM Employee WHERE EmployeeID = p_created_by_admin_id;
+
+    IF v_admin_type != 'Admin' THEN
+        RAISE EXCEPTION 'Employee ID % is not an Admin',
+            p_created_by_admin_id;
+    END IF;
+
+    -- VALIDATION 3: Name not empty
+    IF TRIM(p_first_name) = '' OR p_first_name IS NULL OR
+       TRIM(p_last_name)  = '' OR p_last_name  IS NULL THEN
+        RAISE EXCEPTION 'Name cannot be empty';
+    END IF;
+
+    -- VALIDATION 4: Date of birth
+    IF p_date_of_birth IS NULL THEN
+        RAISE EXCEPTION 'Date of birth cannot be null';
+    END IF;
+    IF p_date_of_birth > CURRENT_DATE THEN
+        RAISE EXCEPTION 'Date of birth cannot be in the future';
+    END IF;
+
+    -- VALIDATION 5: Phone number (10 digits)
+    IF p_phone_number IS NULL OR p_phone_number = '' THEN
+        RAISE EXCEPTION 'Phone number cannot be empty';
+    END IF;
+    IF p_phone_number !~ '^\d{10}$' THEN
+        RAISE EXCEPTION 'Phone number must be exactly 10 digits, got: %',
+            p_phone_number;
+    END IF;
+
+    -- VALIDATION 6: Emergency contact
+    IF p_emergency_contact IS NULL OR p_emergency_contact = '' THEN
+        RAISE EXCEPTION 'Emergency contact cannot be empty';
+    END IF;
+    IF p_emergency_contact !~ '^\d{10}$' THEN
+        RAISE EXCEPTION 'Emergency contact must be exactly 10 digits, got: %',
+            p_emergency_contact;
+    END IF;
+    IF p_phone_number = p_emergency_contact THEN
+        RAISE EXCEPTION 'Emergency contact must differ from phone number';
+    END IF;
+
+    -- VALIDATION 7: Height and Weight
+    IF p_height IS NOT NULL AND (p_height <= 0 OR p_height > 300) THEN
+        RAISE EXCEPTION 'Height must be between 0 and 300 cm, got: %', p_height;
+    END IF;
+    IF p_weight IS NOT NULL AND (p_weight <= 0 OR p_weight > 500) THEN
+        RAISE EXCEPTION 'Weight must be between 0 and 500 kg, got: %', p_weight;
+    END IF;
+
+    -- VALIDATION 8: City and State
+    IF TRIM(p_city)  = '' OR p_city  IS NULL THEN
+        RAISE EXCEPTION 'City cannot be empty';
+    END IF;
+    IF TRIM(p_state) = '' OR p_state IS NULL THEN
+        RAISE EXCEPTION 'State cannot be empty';
+    END IF;
+
+    -- GENERATE UNIQUE SIGNUP CODE
+    SELECT NEXTVAL('patient_patientid_seq') INTO v_seq_val;
+    v_signup_code := 'PAT' || TO_CHAR(NOW(), 'YYYY') ||
+                     LPAD(v_seq_val::TEXT, 4, '0');
+
+    -- INSERT PATIENT
+    INSERT INTO Patient (
+        SignupCode, IsRegistered, FirstName, LastName, DateOfBirth,
+        Gender, PhoneNumber, EmergencyContact, BloodGroup, Height, Weight,
+        AddressLine1, AddressLine2, City, State, PostalCode, Country,
+        CreatedByAdminID, CreatedOn
+    ) VALUES (
+        v_signup_code, FALSE,
+        TRIM(p_first_name), TRIM(p_last_name), p_date_of_birth,
+        p_gender, p_phone_number, p_emergency_contact, p_blood_group,
+        p_height, p_weight, p_address_line1, p_address_line2,
+        p_city, p_state, p_postal_code, p_country,
+        p_created_by_admin_id, NOW()
+    )
+    RETURNING PatientID INTO v_patient_id;
+
+    -- RETURN SUCCESS
+    RETURN QUERY
+    SELECT
+        v_patient_id,
+        v_signup_code,
+        ('Patient ' || TRIM(p_first_name) || ' ' || TRIM(p_last_name) ||
+         ' registered successfully. Signup code: ' || v_signup_code)::TEXT;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+\vspace{1em}
+
+
+% ============================================================
+% FUNCTION 2: fn_create_case_request
+% ============================================================
+
+\subsection{Function 2: \texttt{fn\_create\_case\_request(...)}}
+
+\subsubsection{Description}
+This function creates a patient assessment and an associated case request in a single transaction. A nurse provides the patient's vital signs and condition, selects a target department, and supplies a case summary. The function validates the patient, nurse, and department, checks that no active case already exists for the patient, validates all vital ranges, then inserts both an assessment record and an open case request. It returns a table with columns: \texttt{assessment\_id}, \texttt{case\_request\_id}, \texttt{message}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_patient\_id        & INT            & ID of the patient being assessed \\
+  \rowcolor{tablerowB} p\_nurse\_employee\_id & INT            & EmployeeID of the nurse creating the request \\
+  \rowcolor{tablerowA} p\_symptoms           & TEXT           & Description of the patient's symptoms (required) \\
+  \rowcolor{tablerowB} p\_condition          & condition\_type & Nurse's assessment of the patient's condition (enum) \\
+  \rowcolor{tablerowA} p\_temperature        & DECIMAL        & Body temperature in \textdegree C (30--45) \\
+  \rowcolor{tablerowB} p\_systolic\_bp       & INT            & Systolic blood pressure (50--300) \\
+  \rowcolor{tablerowA} p\_diastolic\_bp      & INT            & Diastolic blood pressure (30--200, must be \textless\ systolic) \\
+  \rowcolor{tablerowB} p\_pulse\_rate        & INT            & Pulse rate in bpm (20--300) \\
+  \rowcolor{tablerowA} p\_oxygen\_level      & DECIMAL        & Oxygen saturation percentage (50--100) \\
+  \rowcolor{tablerowB} p\_blood\_sugar       & DECIMAL        & Blood sugar level in mg/dL (20--1000) \\
+  \rowcolor{tablerowA} p\_notes             & TEXT           & Additional nurse notes (optional) \\
+  \rowcolor{tablerowB} p\_assigned\_dept\_id & INT            & DepartmentID the case is assigned to \\
+  \rowcolor{tablerowA} p\_urgency           & case\_urgency  & Urgency level of the case (enum) \\
+  \rowcolor{tablerowB} p\_case\_summary     & TEXT           & Summary description of the case (required) \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_create_case_request(
+    p_patient_id        INT,
+    p_nurse_employee_id INT,
+    p_symptoms          TEXT,
+    p_condition         condition_type,
+    p_temperature       DECIMAL,
+    p_systolic_bp       INT,
+    p_diastolic_bp      INT,
+    p_pulse_rate        INT,
+    p_oxygen_level      DECIMAL,
+    p_blood_sugar       DECIMAL,
+    p_notes             TEXT,
+    p_assigned_dept_id  INT,
+    p_urgency           case_urgency,
+    p_case_summary      TEXT
+)
+RETURNS TABLE (
+    assessment_id   INT,
+    case_request_id INT,
+    message         TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_assessment_id     INT;
+    v_case_request_id   INT;
+    v_patient_exists    BOOLEAN;
+    v_nurse_exists      BOOLEAN;
+    v_nurse_type        employee_type;
+    v_dept_exists       BOOLEAN;
+    v_open_case_exists  BOOLEAN;
+    v_patient_name      VARCHAR;
+    v_dept_name         VARCHAR;
+BEGIN
+    -- VALIDATION 1: Patient exists
+    SELECT EXISTS (
+        SELECT 1 FROM Patient WHERE PatientID = p_patient_id
+    ) INTO v_patient_exists;
+    IF NOT v_patient_exists THEN
+        RAISE EXCEPTION 'Patient with ID % does not exist', p_patient_id;
+    END IF;
+
+    SELECT FirstName || ' ' || LastName INTO v_patient_name
+    FROM Patient WHERE PatientID = p_patient_id;
+
+    -- VALIDATION 2: Nurse exists and is active
+    SELECT EXISTS (
+        SELECT 1 FROM Employee
+        WHERE EmployeeID = p_nurse_employee_id AND IsActive = TRUE
+    ) INTO v_nurse_exists;
+    IF NOT v_nurse_exists THEN
+        RAISE EXCEPTION 'Nurse with ID % does not exist or is inactive',
+            p_nurse_employee_id;
+    END IF;
+
+    -- VALIDATION 3: Employee must be a Nurse
+    SELECT EmployeeType INTO v_nurse_type
+    FROM Employee WHERE EmployeeID = p_nurse_employee_id;
+    IF v_nurse_type != 'Nurse' THEN
+        RAISE EXCEPTION 'Employee ID % is not a Nurse', p_nurse_employee_id;
+    END IF;
+
+    -- VALIDATION 4: Department exists
+    SELECT EXISTS (
+        SELECT 1 FROM Department WHERE DepartmentID = p_assigned_dept_id
+    ) INTO v_dept_exists;
+    IF NOT v_dept_exists THEN
+        RAISE EXCEPTION 'Department with ID % does not exist', p_assigned_dept_id;
+    END IF;
+
+    SELECT Name INTO v_dept_name
+    FROM Department WHERE DepartmentID = p_assigned_dept_id;
+
+    -- VALIDATION 5: No existing open case for patient
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest
+        WHERE PatientID = p_patient_id
+          AND Status IN ('Open', 'Accepted', 'InProgress')
+    ) INTO v_open_case_exists;
+    IF v_open_case_exists THEN
+        RAISE EXCEPTION 'Patient % already has an active case', v_patient_name;
+    END IF;
+
+    -- VALIDATION 6: Symptoms not empty
+    IF TRIM(p_symptoms) = '' OR p_symptoms IS NULL THEN
+        RAISE EXCEPTION 'Symptoms cannot be empty';
+    END IF;
+
+    -- VALIDATION 7: Case summary not empty
+    IF TRIM(p_case_summary) = '' OR p_case_summary IS NULL THEN
+        RAISE EXCEPTION 'Case summary cannot be empty';
+    END IF;
+
+    -- VALIDATION 8: Vitals range checks
+    IF p_temperature  IS NOT NULL AND
+       (p_temperature < 30 OR p_temperature > 45) THEN
+        RAISE EXCEPTION 'Temperature % out of range (30-45)', p_temperature;
+    END IF;
+    IF p_systolic_bp  IS NOT NULL AND
+       (p_systolic_bp < 50 OR p_systolic_bp > 300) THEN
+        RAISE EXCEPTION 'Systolic BP % out of range (50-300)', p_systolic_bp;
+    END IF;
+    IF p_diastolic_bp IS NOT NULL AND
+       (p_diastolic_bp < 30 OR p_diastolic_bp > 200) THEN
+        RAISE EXCEPTION 'Diastolic BP % out of range (30-200)', p_diastolic_bp;
+    END IF;
+    IF p_systolic_bp IS NOT NULL AND p_diastolic_bp IS NOT NULL
+       AND p_diastolic_bp >= p_systolic_bp THEN
+        RAISE EXCEPTION 'Diastolic BP (%) must be less than Systolic BP (%)',
+            p_diastolic_bp, p_systolic_bp;
+    END IF;
+    IF p_pulse_rate   IS NOT NULL AND
+       (p_pulse_rate < 20 OR p_pulse_rate > 300) THEN
+        RAISE EXCEPTION 'Pulse rate % out of range (20-300)', p_pulse_rate;
+    END IF;
+    IF p_oxygen_level IS NOT NULL AND
+       (p_oxygen_level < 50 OR p_oxygen_level > 100) THEN
+        RAISE EXCEPTION 'Oxygen level % out of range (50-100)', p_oxygen_level;
+    END IF;
+    IF p_blood_sugar  IS NOT NULL AND
+       (p_blood_sugar < 20 OR p_blood_sugar > 1000) THEN
+        RAISE EXCEPTION 'Blood sugar % out of range (20-1000)', p_blood_sugar;
+    END IF;
+
+    -- INSERT PATIENT ASSESSMENT
+    INSERT INTO PatientAssessment (
+        PatientID, NurseEmployeeID, Symptoms, Condition,
+        Temperature, SystolicBP, DiastolicBP, PulseRate,
+        OxygenLevel, BloodSugar, Notes, AssessedOn
+    ) VALUES (
+        p_patient_id, p_nurse_employee_id, TRIM(p_symptoms), p_condition,
+        p_temperature, p_systolic_bp, p_diastolic_bp, p_pulse_rate,
+        p_oxygen_level, p_blood_sugar, p_notes, NOW()
+    )
+    RETURNING AssessmentID INTO v_assessment_id;
+
+    -- INSERT CASE REQUEST (Status = Open, doctor not yet assigned)
+    INSERT INTO CaseRequest (
+        PatientID, AssessmentID, AssignedDeptID, DoctorEmployeeID,
+        NurseEmployeeID, RoomID, CreatedByAdminID,
+        CaseSummary, Urgency, Status, IsAdmitted, CreatedOn
+    ) VALUES (
+        p_patient_id, v_assessment_id, p_assigned_dept_id, NULL,
+        p_nurse_employee_id, NULL, p_nurse_employee_id,
+        TRIM(p_case_summary), p_urgency, 'Open', FALSE, NOW()
+    )
+    RETURNING CaseRequestID INTO v_case_request_id;
+
+    -- RETURN SUCCESS
+    RETURN QUERY
+    SELECT
+        v_assessment_id,
+        v_case_request_id,
+        ('Case request created for patient ' || v_patient_name ||
+         ' in ' || v_dept_name ||
+         ' department. Waiting for doctor to accept.')::TEXT;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+\vspace{1em}
+
+% ============================================================
+% FUNCTION 3: fn_accept_reject_case
+% ============================================================
+
+\subsection{Function 3: \texttt{fn\_accept\_reject\_case(...)}}
+
+\subsubsection{Description}
+This function allows a doctor to accept or reject an open case request. It validates that the case exists and is in \texttt{Open} status, that the doctor is active and of the correct employee type, that the doctor is currently accepting new cases, and that the doctor must belong to the \textbf{same department as the case}. On acceptance the case status is updated to \texttt{Accepted} and the doctor is assigned. On rejection the case reverts to \texttt{Open} so another doctor may accept it, and the rejection reason is appended to the case summary. A rejection reason is mandatory when rejecting. The function returns a table with columns: \texttt{case\_request\_id}, \texttt{status}, \texttt{message}.
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_case\_request\_id   & INT     & ID of the case request to act upon \\
+  \rowcolor{tablerowB} p\_doctor\_employee\_id & INT     & EmployeeID of the doctor accepting or rejecting \\
+  \rowcolor{tablerowA} p\_action             & VARCHAR & Action to perform: \texttt{'Accept'} or \texttt{'Reject'} \\
+  \rowcolor{tablerowB} p\_rejection\_reason  & TEXT    & Reason for rejection (required when rejecting; default \texttt{NULL}) \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_accept_reject_case(
+    p_case_request_id    INT,
+    p_doctor_employee_id INT,
+    p_action             VARCHAR,   -- 'Accept' or 'Reject'
+    p_rejection_reason   TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+    case_request_id INT,
+    status          TEXT,
+    message         TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_case_exists    BOOLEAN;
+    v_case_status    case_status;
+    v_doctor_exists  BOOLEAN;
+    v_doctor_type    employee_type;
+    v_doctor_dept    INT;
+    v_case_dept      INT;
+    v_is_accepting   BOOLEAN;
+    v_patient_name   VARCHAR;
+    v_doctor_name    VARCHAR;
+BEGIN
+    -- VALIDATION 1: Case exists
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest
+        WHERE CaseRequestID = p_case_request_id
+    ) INTO v_case_exists;
+    IF NOT v_case_exists THEN
+        RAISE EXCEPTION 'Case request with ID % does not exist',
+            p_case_request_id;
+    END IF;
+
+    -- VALIDATION 2: Case must be Open
+    SELECT Status INTO v_case_status
+    FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    IF v_case_status != 'Open' THEN
+        RAISE EXCEPTION 'Case % is not Open (current status: %)',
+            p_case_request_id, v_case_status;
+    END IF;
+
+    -- VALIDATION 3: Doctor exists and is active
+    SELECT EXISTS (
+        SELECT 1 FROM Employee
+        WHERE EmployeeID = p_doctor_employee_id AND IsActive = TRUE
+    ) INTO v_doctor_exists;
+    IF NOT v_doctor_exists THEN
+        RAISE EXCEPTION 'Doctor with ID % does not exist or is inactive',
+            p_doctor_employee_id;
+    END IF;
+
+    -- VALIDATION 4: Employee must be a Doctor
+    SELECT EmployeeType INTO v_doctor_type
+    FROM Employee WHERE EmployeeID = p_doctor_employee_id;
+    IF v_doctor_type != 'Doctor' THEN
+        RAISE EXCEPTION 'Employee ID % is not a Doctor', p_doctor_employee_id;
+    END IF;
+
+    -- VALIDATION 5: Doctor must be accepting cases
+    SELECT IsAcceptingCases INTO v_is_accepting
+    FROM DoctorProfile WHERE EmployeeID = p_doctor_employee_id;
+    IF NOT v_is_accepting THEN
+        RAISE EXCEPTION 'Doctor % is not currently accepting new cases',
+            p_doctor_employee_id;
+    END IF;
+
+    -- VALIDATION 6: Doctor must belong to the same department as the case
+    SELECT DepartmentID INTO v_doctor_dept
+    FROM Employee WHERE EmployeeID = p_doctor_employee_id;
+
+    SELECT AssignedDeptID INTO v_case_dept
+    FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+
+    IF v_doctor_dept != v_case_dept THEN
+        RAISE EXCEPTION
+            'Doctor dept (%) differs from case dept (%)',
+            v_doctor_dept, v_case_dept;
+    END IF;
+
+    -- VALIDATION 7: Action must be Accept or Reject
+    IF p_action NOT IN ('Accept', 'Reject') THEN
+        RAISE EXCEPTION 'Invalid action %. Must be Accept or Reject', p_action;
+    END IF;
+
+    -- VALIDATION 8: Rejection reason required when rejecting
+    IF p_action = 'Reject' AND
+       (p_rejection_reason IS NULL OR TRIM(p_rejection_reason) = '') THEN
+        RAISE EXCEPTION 'Rejection reason is required when rejecting a case';
+    END IF;
+
+    -- Retrieve names for the response message
+    SELECT FirstName || ' ' || LastName INTO v_patient_name
+    FROM Patient p
+    JOIN CaseRequest cr ON p.PatientID = cr.PatientID
+    WHERE cr.CaseRequestID = p_case_request_id;
+
+    SELECT FirstName || ' ' || LastName INTO v_doctor_name
+    FROM Employee WHERE EmployeeID = p_doctor_employee_id;
+
+    -- ACCEPT CASE
+    IF p_action = 'Accept' THEN
+        UPDATE CaseRequest
+        SET DoctorEmployeeID = p_doctor_employee_id,
+            Status           = 'Accepted',
+            ModifiedOn       = NOW()
+        WHERE CaseRequestID = p_case_request_id;
+
+        RETURN QUERY
+        SELECT
+            p_case_request_id,
+            'Accepted'::TEXT,
+            ('Case ' || p_case_request_id ||
+             ' accepted by Dr. ' || v_doctor_name ||
+             ' for patient '     || v_patient_name || '.')::TEXT;
+
+    -- REJECT CASE (reverts to Open for other doctors)
+    ELSIF p_action = 'Reject' THEN
+        UPDATE CaseRequest
+        SET DoctorEmployeeID = NULL,
+            Status           = 'Open',
+            CaseSummary      = CaseSummary ||
+                               ' | Rejected by Dr. ' || v_doctor_name ||
+                               ': ' || p_rejection_reason,
+            ModifiedOn       = NOW()
+        WHERE CaseRequestID = p_case_request_id;
+
+        RETURN QUERY
+        SELECT
+            p_case_request_id,
+            'Rejected'::TEXT,
+            ('Case ' || p_case_request_id ||
+             ' rejected by Dr. ' || v_doctor_name ||
+             ' for patient '     || v_patient_name ||
+             '. Reason: '        || p_rejection_reason ||
+             '. Case is back to Open.')::TEXT;
+    END IF;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+% ============================================================
+% FUNCTION 4: fn_submit_feedback
+% ============================================================
+
+\vspace{1em}
+
+\subsection{Function 4: \texttt{fn\_submit\_feedback(...)}}
+
+\subsubsection{Description}
+This function allows a patient to submit feedback for a doctor or nurse involved in their resolved case. It validates that both the patient and employee exist and are active, that the case is in \texttt{Resolved} status, that the patient belongs to the case, that the employee (doctor or nurse) was part of the case, and that feedback has not already been submitted by that patient for that case. The employee is routed to the correct column (\texttt{DoctorEmployeeID} or \texttt{NurseEmployeeID}) based on their type. The function returns a table with columns: \texttt{feedback\_patient\_id}, \texttt{feedback\_employee\_id}, \texttt{feedback\_case\_id}, \texttt{message}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_patient\_id      & INT      & ID of the patient submitting feedback \\
+  \rowcolor{tablerowB} p\_employee\_id     & INT      & EmployeeID of the doctor or nurse being rated \\
+  \rowcolor{tablerowA} p\_case\_request\_id & INT      & ID of the resolved case the feedback relates to \\
+  \rowcolor{tablerowB} p\_rating           & SMALLINT & Rating score between 1 and 5 (inclusive) \\
+  \rowcolor{tablerowA} p\_comment          & TEXT     & Optional free-text comment (default \texttt{NULL}) \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_submit_feedback(
+    p_patient_id        INT,
+    p_employee_id       INT,
+    p_case_request_id   INT,
+    p_rating            SMALLINT,
+    p_comment           TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+    feedback_patient_id     INT,
+    feedback_employee_id    INT,
+    feedback_case_id        INT,
+    message                 TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_patient_exists    BOOLEAN;
+    v_employee_exists   BOOLEAN;
+    v_case_exists       BOOLEAN;
+    v_case_status       case_status;
+    v_patient_owns_case BOOLEAN;
+    v_employee_in_case  BOOLEAN;
+    v_already_submitted BOOLEAN;
+    v_patient_name      VARCHAR;
+    v_employee_name     VARCHAR;
+    v_employee_type     employee_type;
+BEGIN
+    -- VALIDATION 1: Patient exists
+    SELECT EXISTS (SELECT 1 FROM Patient WHERE PatientID = p_patient_id)
+        INTO v_patient_exists;
+    IF NOT v_patient_exists THEN
+        RAISE EXCEPTION 'Patient with ID % does not exist', p_patient_id;
+    END IF;
+    SELECT FirstName || ' ' || LastName INTO v_patient_name
+    FROM Patient WHERE PatientID = p_patient_id;
+
+    -- VALIDATION 2: Employee exists and is active
+    SELECT EXISTS (
+        SELECT 1 FROM Employee
+        WHERE EmployeeID = p_employee_id AND IsActive = TRUE
+    ) INTO v_employee_exists;
+    IF NOT v_employee_exists THEN
+        RAISE EXCEPTION 'Employee with ID % does not exist or is inactive',
+            p_employee_id;
+    END IF;
+    SELECT FirstName || ' ' || LastName INTO v_employee_name
+    FROM Employee WHERE EmployeeID = p_employee_id;
+    SELECT EmployeeType INTO v_employee_type
+    FROM Employee WHERE EmployeeID = p_employee_id;
+
+    -- VALIDATION 3: Case exists
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id
+    ) INTO v_case_exists;
+    IF NOT v_case_exists THEN
+        RAISE EXCEPTION 'Case request with ID % does not exist', p_case_request_id;
+    END IF;
+
+    -- VALIDATION 4: Case must be Resolved
+    SELECT Status INTO v_case_status
+    FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    IF v_case_status != 'Resolved' THEN
+        RAISE EXCEPTION
+            'Feedback can only be submitted for Resolved cases. Current status: %',
+            v_case_status;
+    END IF;
+
+    -- VALIDATION 5: Patient must belong to this case
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest
+        WHERE CaseRequestID = p_case_request_id AND PatientID = p_patient_id
+    ) INTO v_patient_owns_case;
+    IF NOT v_patient_owns_case THEN
+        RAISE EXCEPTION 'Patient % is not associated with case %',
+            v_patient_name, p_case_request_id;
+    END IF;
+
+    -- VALIDATION 6: Employee must be the doctor or nurse of this case
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest
+        WHERE CaseRequestID = p_case_request_id
+          AND (DoctorEmployeeID = p_employee_id
+               OR NurseEmployeeID = p_employee_id)
+    ) INTO v_employee_in_case;
+    IF NOT v_employee_in_case THEN
+        RAISE EXCEPTION 'Employee % is not the doctor or nurse of case %',
+            v_employee_name, p_case_request_id;
+    END IF;
+
+    -- VALIDATION 7: Rating must be between 1 and 5
+    IF p_rating IS NULL THEN
+        RAISE EXCEPTION 'Rating cannot be null';
+    END IF;
+    IF p_rating < 1 OR p_rating > 5 THEN
+        RAISE EXCEPTION 'Rating must be between 1 and 5, got: %', p_rating;
+    END IF;
+
+    -- VALIDATION 8: Feedback not already submitted for this case
+    SELECT EXISTS (
+        SELECT 1 FROM Feedback
+        WHERE PatientID = p_patient_id AND CaseRequestID = p_case_request_id
+    ) INTO v_already_submitted;
+    IF v_already_submitted THEN
+        RAISE EXCEPTION 'Feedback already submitted by patient % for case %',
+            v_patient_name, p_case_request_id;
+    END IF;
+
+    -- INSERT FEEDBACK (route to correct column based on employee type)
+    INSERT INTO Feedback (
+        PatientID, CaseRequestID,
+        DoctorEmployeeID, NurseEmployeeID,
+        Rating, Comment, CreatedOn
+    ) VALUES (
+        p_patient_id,
+        p_case_request_id,
+        CASE WHEN v_employee_type = 'Doctor' THEN p_employee_id ELSE NULL END,
+        CASE WHEN v_employee_type = 'Nurse'  THEN p_employee_id ELSE NULL END,
+        p_rating,
+        TRIM(p_comment),
+        NOW()
+    );
+
+    RETURN QUERY
+    SELECT
+        p_patient_id,
+        p_employee_id,
+        p_case_request_id,
+        ('Feedback submitted successfully by ' || v_patient_name ||
+         ' for ' || v_employee_name ||
+         ' with rating ' || p_rating || '/5.')::TEXT;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+
+% ============================================================
+% FUNCTION 5: fn_generate_bill
+% ============================================================
+
+\vspace{1em}
+
+\subsection{Function 5: \texttt{fn\_generate\_bill(p\_case\_request\_id INT)}}
+
+\subsubsection{Description}
+This function acts as a billing aggregation engine. Given a case request ID, it computes the total bill by summing a fixed consultation fee, room charges (calculated from the number of nights admitted multiplied by the room's nightly rate), lab test charges (summed from ordered lab tests), and medicine charges (a flat rate per prescription line). It then looks up the patient's active insurance policy to determine the coverage percentage and computes the insurance-covered amount. The resulting bill record is inserted into the \texttt{Bill} table with a \texttt{Pending} payment status. The function returns a table with columns: \texttt{bill\_id}, \texttt{total\_amount}, \texttt{insurance\_covered}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_case\_request\_id & INT & ID of the case request for which the bill is generated \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_generate_bill(p_case_request_id INT)
+RETURNS TABLE (
+    bill_id           INT,
+    total_amount      DECIMAL,
+    insurance_covered DECIMAL
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_case_exists       BOOLEAN;
+    v_case_status       case_status;
+    v_patient_id        INT;
+    v_consultation_fee  DECIMAL := 500.00;
+    v_lab_charges       DECIMAL := 0;
+    v_room_charges      DECIMAL := 0;
+    v_rx_count          INT     := 0;
+    v_medicine_charges  DECIMAL := 0;
+    v_total_amount      DECIMAL := 0;
+    v_insurance_covered DECIMAL := 0;
+    v_final_amount      DECIMAL := 0;
+    v_patient_ins_id    INT     := NULL;
+    v_coverage_percent  DECIMAL := 0;
+    v_assessed_on       TIMESTAMP;
+    v_room_price        DECIMAL;
+    v_days_stayed       INT;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id
+    ) INTO v_case_exists;
+    IF NOT v_case_exists THEN
+        RAISE EXCEPTION 'Case request % does not exist', p_case_request_id;
+    END IF;
+
+    SELECT PatientID, Status INTO v_patient_id, v_case_status
+    FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+
+    -- Lab charges: sum of all ordered lab test prices
+    SELECT COALESCE(SUM(lt.Price), 0) INTO v_lab_charges
+    FROM LabReport lr
+    JOIN LabTest lt ON lr.LabTestID = lt.LabTestID
+    WHERE lr.CaseRequestID = p_case_request_id;
+
+    -- Room charges: nights stayed * price per night (minimum 1 night)
+    SELECT cr.AdmittedOn, r.PricePerNight INTO v_assessed_on, v_room_price
+    FROM CaseRequest cr
+    JOIN Room r ON cr.RoomID = r.RoomID
+    WHERE cr.CaseRequestID = p_case_request_id;
+
+    IF v_assessed_on IS NOT NULL THEN
+        v_days_stayed := GREATEST(
+            1,
+            CEIL(EXTRACT(EPOCH FROM (NOW() - v_assessed_on)) / 86400)
+        );
+        v_room_charges := v_days_stayed * v_room_price;
+    END IF;
+
+    -- Medicine charges: flat rate per prescription line
+    SELECT COUNT(*) INTO v_rx_count
+    FROM Prescription WHERE CaseRequestID = p_case_request_id;
+    v_medicine_charges := v_rx_count * 200.00;
+
+    -- Base total
+    v_total_amount := v_consultation_fee + v_lab_charges
+                      + v_room_charges + v_medicine_charges;
+
+    -- Insurance lookup (patient's active policy coverage percentage)
+    SELECT PatientInsuranceID, CoveragePercent
+    INTO v_patient_ins_id, v_coverage_percent
+    FROM PatientInsurance
+    WHERE PatientID = v_patient_id AND Status = 'Active'
+    LIMIT 1;
+
+    IF v_patient_ins_id IS NOT NULL THEN
+        v_insurance_covered := v_total_amount * (v_coverage_percent / 100.0);
+    ELSE
+        v_insurance_covered := 0;
+    END IF;
+
+    v_final_amount := v_total_amount - v_insurance_covered;
+
+    INSERT INTO bill (
+        CaseRequestID, PatientInsuranceID,
+        ConsultationFee, RoomCharges, LabCharges, MedicineCharges,
+        OtherCharges, Discount, InsuranceCovered, TotalAmount, PaymentStatus
+    ) VALUES (
+        p_case_request_id, v_patient_ins_id,
+        v_consultation_fee, v_room_charges, v_lab_charges, v_medicine_charges,
+        0, 0, v_insurance_covered, v_total_amount, 'Pending'
+    )
+    RETURNING BillID INTO bill_id;
+
+    RETURN QUERY SELECT bill_id, v_final_amount, v_insurance_covered;
+END;
+$$;
+\end{lstlisting}
+
+
+% ============================================================
+% TRIGGER FUNCTION 6: fn_free_room_on_resolve
+% ============================================================
+
+\vspace{1em}
+
+\subsection{Function 6: \texttt{fn\_free\_room\_on\_resolve()} (Trigger)}
+
+\subsubsection{Description}
+This is a trigger function attached to the \texttt{CaseRequest} table via the trigger \texttt{trg\_free\_room\_on\_resolution}. It fires \texttt{AFTER UPDATE OF Status} for each row. When a case transitions from any non-\texttt{Resolved} status to \texttt{Resolved} and has an assigned room, the function automatically sets \texttt{IsOccupied = FALSE} on that room, freeing it for future admissions. No parameters are passed directly; the function operates on the \texttt{OLD} and \texttt{NEW} transition record variables provided by the trigger framework.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} (none) & — & Trigger function; receives \texttt{OLD} and \texttt{NEW} row records implicitly from the PostgreSQL trigger framework \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_free_room_on_resolve()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_room_id INT;
+BEGIN
+    -- Only act when status transitions into Resolved and a room is assigned
+    IF OLD.Status != 'Resolved'
+       AND NEW.Status = 'Resolved'
+       AND NEW.RoomID IS NOT NULL THEN
+        UPDATE Room
+        SET IsOccupied = FALSE
+        WHERE RoomID = NEW.RoomID;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_free_room_on_resolution ON CaseRequest;
+
+CREATE TRIGGER trg_free_room_on_resolution
+AFTER UPDATE OF Status ON CaseRequest
+FOR EACH ROW
+EXECUTE FUNCTION fn_free_room_on_resolve();
+\end{lstlisting}
+
+\vspace{1em}
+
+% ============================================================
+% FUNCTION 7: fn_add_diagnosis
+% ============================================================
+
+\subsection{Function 7: \texttt{fn\_add\_diagnosis(...)}}
+
+\subsubsection{Description}
+This function allows the assigned doctor to add a diagnosis to an active case. It validates that the case exists and is in \texttt{Accepted} or \texttt{InProgress} status, that the calling doctor is the one assigned to the case, that the specified disease exists, and that the same disease has not already been diagnosed for this case. After inserting the diagnosis, if the case was still in \texttt{Accepted} status it is automatically promoted to \texttt{InProgress}. The function returns a table with columns: \texttt{case\_request\_id}, \texttt{disease\_id}, \texttt{message}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_case\_request\_id   & INT           & ID of the case to add the diagnosis to \\
+  \rowcolor{tablerowB} p\_disease\_id         & INT           & ID of the disease being diagnosed \\
+  \rowcolor{tablerowA} p\_severity            & severity\_type & Severity level of the diagnosis (enum) \\
+  \rowcolor{tablerowB} p\_notes              & TEXT          & Clinical notes accompanying the diagnosis \\
+  \rowcolor{tablerowA} p\_doctor\_employee\_id & INT           & EmployeeID of the doctor adding the diagnosis \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_add_diagnosis(
+    p_case_request_id    INT,
+    p_disease_id         INT,
+    p_severity           severity_type,
+    p_notes              TEXT,
+    p_doctor_employee_id INT
+)
+RETURNS TABLE (
+    case_request_id INT,
+    disease_id      INT,
+    message         TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_case_exists       BOOLEAN;
+    v_disease_exists    BOOLEAN;
+    v_doctor_owns_case  BOOLEAN;
+    v_case_status       case_status;
+    v_already_diagnosed BOOLEAN;
+    v_disease_name      VARCHAR;
+BEGIN
+    -- VALIDATION 1: Case exists
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id
+    ) INTO v_case_exists;
+    IF NOT v_case_exists THEN
+        RAISE EXCEPTION 'Case request % does not exist', p_case_request_id;
+    END IF;
+
+    -- VALIDATION 2: Case must be Accepted or InProgress
+    SELECT Status INTO v_case_status
+    FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    IF v_case_status NOT IN ('Accepted', 'InProgress') THEN
+        RAISE EXCEPTION
+            'Diagnosis can only be added to Accepted or InProgress cases. '
+            'Current status: %', v_case_status;
+    END IF;
+
+    -- VALIDATION 3: Doctor must be assigned to this case
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest
+        WHERE CaseRequestID = p_case_request_id
+          AND DoctorEmployeeID = p_doctor_employee_id
+    ) INTO v_doctor_owns_case;
+    IF NOT v_doctor_owns_case THEN
+        RAISE EXCEPTION 'Doctor % is not assigned to case %',
+            p_doctor_employee_id, p_case_request_id;
+    END IF;
+
+    -- VALIDATION 4: Disease exists
+    SELECT EXISTS (
+        SELECT 1 FROM Disease WHERE DiseaseID = p_disease_id
+    ) INTO v_disease_exists;
+    IF NOT v_disease_exists THEN
+        RAISE EXCEPTION 'Disease with ID % does not exist', p_disease_id;
+    END IF;
+    SELECT Name INTO v_disease_name FROM Disease WHERE DiseaseID = p_disease_id;
+
+    -- VALIDATION 5: Disease not already diagnosed for this case
+    SELECT EXISTS (
+        SELECT 1 FROM Diagnosis
+        WHERE CaseRequestID = p_case_request_id AND DiseaseID = p_disease_id
+    ) INTO v_already_diagnosed;
+    IF v_already_diagnosed THEN
+        RAISE EXCEPTION 'Disease % already diagnosed for case %',
+            v_disease_name, p_case_request_id;
+    END IF;
+
+    -- INSERT DIAGNOSIS
+    INSERT INTO Diagnosis (CaseRequestID, DiseaseID, Severity, Notes, DiagnosedOn)
+    VALUES (p_case_request_id, p_disease_id, p_severity, TRIM(p_notes), NOW());
+
+    -- Promote case from Accepted to InProgress if needed
+    UPDATE CaseRequest
+    SET Status = 'InProgress'
+    WHERE CaseRequestID = p_case_request_id AND Status = 'Accepted';
+
+    RETURN QUERY
+    SELECT
+        p_case_request_id,
+        p_disease_id,
+        ('Diagnosis added: ' || v_disease_name ||
+         ' (' || p_severity || ') for case ' || p_case_request_id)::TEXT;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+\vspace{1em}
+% ============================================================
+% FUNCTION 8: fn_order_lab_test
+% ============================================================
+
+\subsection{Function 8: \texttt{fn\_order\_lab\_test(...)}}
+
+\subsubsection{Description}
+This function allows the assigned doctor to order a laboratory test for a case that is in \texttt{Accepted} or \texttt{InProgress} status. It validates that the case and the lab test both exist, that the requesting doctor is the one assigned to the case, and that the same lab test has not already been ordered for this case. A new \texttt{LabReport} record is created with status \texttt{Ordered}. The function returns a table with columns: \texttt{report\_id}, \texttt{message}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_case\_request\_id & INT & ID of the case for which the lab test is ordered \\
+  \rowcolor{tablerowB} p\_lab\_test\_id     & INT & ID of the lab test to order \\
+  \rowcolor{tablerowA} p\_ordered\_by\_id   & INT & EmployeeID of the doctor ordering the test \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_order_lab_test(
+    p_case_request_id INT,
+    p_lab_test_id     INT,
+    p_ordered_by_id   INT
+)
+RETURNS TABLE (report_id INT, message TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_report_id        INT;
+    v_case_exists      BOOLEAN;
+    v_case_status      case_status;
+    v_doctor_owns_case BOOLEAN;
+    v_test_exists      BOOLEAN;
+    v_already_ordered  BOOLEAN;
+    v_test_name        VARCHAR;
+BEGIN
+    -- VALIDATION 1: Case exists
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id
+    ) INTO v_case_exists;
+    IF NOT v_case_exists THEN
+        RAISE EXCEPTION 'Case % does not exist', p_case_request_id;
+    END IF;
+
+    -- VALIDATION 2: Case must be Accepted or InProgress
+    SELECT Status INTO v_case_status
+    FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    IF v_case_status NOT IN ('Accepted', 'InProgress') THEN
+        RAISE EXCEPTION
+            'Lab test can only be ordered for Accepted or InProgress cases';
+    END IF;
+
+    -- VALIDATION 3: Doctor must be assigned to this case
+    SELECT EXISTS (
+        SELECT 1 FROM CaseRequest
+        WHERE CaseRequestID = p_case_request_id
+          AND DoctorEmployeeID = p_ordered_by_id
+    ) INTO v_doctor_owns_case;
+    IF NOT v_doctor_owns_case THEN
+        RAISE EXCEPTION 'Doctor % is not assigned to case %',
+            p_ordered_by_id, p_case_request_id;
+    END IF;
+
+    -- VALIDATION 4: Lab test exists
+    SELECT EXISTS (
+        SELECT 1 FROM LabTest WHERE LabTestID = p_lab_test_id
+    ) INTO v_test_exists;
+    IF NOT v_test_exists THEN
+        RAISE EXCEPTION 'Lab test % does not exist', p_lab_test_id;
+    END IF;
+    SELECT TestName INTO v_test_name FROM LabTest WHERE LabTestID = p_lab_test_id;
+
+    -- VALIDATION 5: Lab test not already ordered for this case
+    SELECT EXISTS (
+        SELECT 1 FROM LabReport
+        WHERE CaseRequestID = p_case_request_id AND LabTestID = p_lab_test_id
+    ) INTO v_already_ordered;
+    IF v_already_ordered THEN
+        RAISE EXCEPTION 'Lab test % already ordered for case %',
+            v_test_name, p_case_request_id;
+    END IF;
+
+    -- INSERT LAB REPORT with status Ordered
+    INSERT INTO LabReport (
+        CaseRequestID, LabTestID, PatientID,
+        OrderedByID, Status, OrderedOn
+    )
+    SELECT
+        p_case_request_id,
+        p_lab_test_id,
+        cr.PatientID,
+        p_ordered_by_id,
+        'Ordered',
+        NOW()
+    FROM CaseRequest cr
+    WHERE cr.CaseRequestID = p_case_request_id
+    RETURNING ReportID INTO v_report_id;
+
+    RETURN QUERY
+    SELECT v_report_id,
+        ('Lab test ' || v_test_name ||
+         ' ordered successfully for case ' || p_case_request_id)::TEXT;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+\vspace{1em}
+% ============================================================
+% FUNCTION 9: fn_nurse_fill_lab_report
+% ============================================================
+
+\subsection{Function 9: \texttt{fn\_nurse\_fill\_lab\_report(...)}}
+
+\subsubsection{Description}
+This function allows the nurse assigned to a case to fill in the result of an ordered lab report. It validates that the lab report exists, that the employee is an active nurse, that the nurse is the one assigned to the case associated with the report, and that the report has not already been completed. On success, the report's \texttt{TestValue} is recorded, the status is updated to \texttt{Resulted}, and the performing nurse and result timestamp are stored. The function returns a table with columns: \texttt{report\_id}, \texttt{message}.
+
+\subsubsection{Parameters}
+
+\begin{center}
+\begin{tabular}{L{4.5cm} L{2.5cm} L{6.5cm}}
+  \rowcolor{tableheader} \theadcell Parameter & \theadcell Type & \theadcell Description \\
+  \rowcolor{tablerowA} p\_report\_id         & INT     & ID of the lab report to fill in \\
+  \rowcolor{tablerowB} p\_nurse\_employee\_id & INT     & EmployeeID of the nurse recording the result \\
+  \rowcolor{tablerowA} p\_test\_value        & VARCHAR & The test result value to record \\
+\end{tabular}
+\end{center}
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE FUNCTION fn_nurse_fill_lab_report(
+    p_report_id         INT,
+    p_nurse_employee_id INT,
+    p_test_value        VARCHAR
+)
+RETURNS TABLE (report_id INT, message TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_exists          BOOLEAN;
+    v_case_id         INT;
+    v_nurse_valid     BOOLEAN;
+    v_assigned_nurse  INT;
+    v_status          lab_status;
+BEGIN
+    -- VALIDATION 1: Lab report exists
+    SELECT EXISTS (
+        SELECT 1 FROM LabReport WHERE ReportID = p_report_id
+    ) INTO v_exists;
+    IF NOT v_exists THEN
+        RAISE EXCEPTION 'Lab report % does not exist', p_report_id;
+    END IF;
+
+    SELECT CaseRequestID, Status INTO v_case_id, v_status
+    FROM LabReport WHERE ReportID = p_report_id;
+
+    -- VALIDATION 2: Employee is an active nurse
+    SELECT EXISTS (
+        SELECT 1 FROM Employee
+        WHERE EmployeeID = p_nurse_employee_id
+          AND EmployeeType = 'Nurse'
+          AND IsActive = TRUE
+    ) INTO v_nurse_valid;
+    IF NOT v_nurse_valid THEN
+        RAISE EXCEPTION 'Employee % is not a valid active nurse',
+            p_nurse_employee_id;
+    END IF;
+
+    -- VALIDATION 3: Nurse must be assigned to the case
+    SELECT NurseEmployeeID INTO v_assigned_nurse
+    FROM CaseRequest WHERE CaseRequestID = v_case_id;
+    IF v_assigned_nurse IS NULL OR v_assigned_nurse != p_nurse_employee_id THEN
+        RAISE EXCEPTION 'Nurse % is not assigned to this case',
+            p_nurse_employee_id;
+    END IF;
+
+    -- VALIDATION 4: Report must not already be completed
+    IF v_status = 'Resulted' THEN
+        RAISE EXCEPTION 'Lab report % has already been completed', p_report_id;
+    END IF;
+
+    -- UPDATE LAB REPORT with result
+    UPDATE LabReport
+    SET TestValue     = p_test_value,
+        Status        = 'Resulted',
+        ResultedOn    = NOW(),
+        PerformedByID = p_nurse_employee_id
+    WHERE ReportID = p_report_id;
+
+    RETURN QUERY
+    SELECT p_report_id,
+        'Lab report updated successfully by nurse'::TEXT;
+
+EXCEPTION
+    WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
+END;
+$$;
+\end{lstlisting}
+
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\subsection{System Workflow Diagram}
+% ═════════════════════════════════════════════════════════════════════════════
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{workflow.png}
+\end{figure}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Functions and Triggers}
+% ═════════════════════════════════════════════════════════════════════════════
+
+The following PostgreSQL functions have been implemented to automate workflows and preserve consistency in the Hospital Management System database.
+
+\subsection{List of Functions}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{L{5cm} L{8cm}}
+\rowcolor{tableheader} \theadcell Function Name & \theadcell Purpose \\
+
+\rowcolor{tablerowA} \texttt{fn\_register\_patient()} &
+Registers a new patient and stores personal details \\
+
+\rowcolor{tablerowB} \texttt{fn\_create\_case\_request()} &
+Creates patient assessment and generates a case request \\
+
+\rowcolor{tablerowA} \texttt{fn\_accept\_reject\_case()} &
+Allows doctor to accept or reject a case request assigned to their department \\
+
+\rowcolor{tablerowB} \texttt{fn\_submit\_feedback()} &
+Stores patient feedback and rating after treatment \\
+
+\rowcolor{tablerowA} \texttt{fn\_generate\_bill()} &
+Automatically generates billing details for completed cases \\
+
+\rowcolor{tablerowB} \texttt{fn\_free\_room\_on\_resolve()} &
+Trigger that automatically frees the assigned room when a case is resolved \\
+
+\rowcolor{tablerowA} \texttt{fn\_add\_diagnosis()} &
+Stores diagnosis details and severity for a case \\
+
+\rowcolor{tablerowB} \texttt{fn\_order\_lab\_test()} &
+Creates a new lab test request for a case \\
+
+\rowcolor{tablerowA} \texttt{fn\_nurse\_fill\_lab\_report()} &
+Allows nurse to enter lab test results \\
+
+\end{tabular}
+\end{center}
+
+\subsection{Role of Functions in Preserving Consistency}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \texttt{fn\_register\_patient()} prevents duplicate patient creation and ensures mandatory fields are stored.
+
+    \item \texttt{fn\_create\_case\_request()} guarantees that patient assessment and case request creation happen in a controlled and linked manner.
+
+    \item \texttt{fn\_accept\_reject\_case()} ensures that only valid case requests are updated, prevents invalid status transitions, and restricts actions to doctors belonging to the same department as the case.
+
+    \item \texttt{fn\_submit\_feedback()} prevents duplicate feedback and ensures rating values remain within valid limits.
+
+    \item \texttt{fn\_generate\_bill()} ensures bill values are computed correctly based on treatment, room charges, and lab tests.
+
+    \item \texttt{fn\_free\_room\_on\_resolve()} automatically releases the occupied room upon case resolution, ensuring room availability is always up to date.
+
+    \item \texttt{fn\_add\_diagnosis()} ensures diagnosis is added only for valid case requests and valid diseases present in the master table.
+
+    \item \texttt{fn\_order\_lab\_test()} ensures only valid lab tests are ordered for an existing case.
+
+    \item \texttt{fn\_nurse\_fill\_lab\_report()} ensures reports are updated only by authorized staff and only for existing test orders.
+\end{itemize}
+%
+\subsection{Triggers}
+
+The following triggers have been implemented to automatically enforce business rules and maintain database consistency.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{L{5cm} L{8cm}}
+\rowcolor{tableheader} \theadcell Trigger Name & \theadcell Purpose \\
+
+\rowcolor{tablerowA} \texttt{trg\_prevent\_double\_booking} &
+Prevents a doctor from being assigned two appointments at the same date and time \\
+
+\rowcolor{tablerowB} \texttt{trg\_auto\_complete\_case} &
+Automatically marks a case as resolved when patient discharge time is entered \\
+
+\rowcolor{tablerowA} \texttt{trg\_calculate\_bill} &
+Automatically calculates total bill amount before insert or update \\
+
+\rowcolor{tablerowB} \texttt{trg\_room\_status} &
+Updates room occupancy status during admission and discharge \\
+
+\rowcolor{tablerowA} \texttt{trg\_lab\_result\_time} &
+Automatically records result completion timestamp for lab reports \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Trigger Consistency Justification}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \texttt{trg\_prevent\_double\_booking} ensures that no doctor can have overlapping appointments, thereby preserving scheduling consistency.
+    
+    \item \texttt{trg\_auto\_complete\_case} automatically updates the case status to \texttt{Resolved} when the patient is discharged, ensuring workflow correctness.
+    
+    \item \texttt{trg\_calculate\_bill} guarantees that the total amount in the Bill table always matches the sum of all billing components.
+    
+    \item \texttt{trg\_room\_status} keeps room occupancy synchronized with patient admission and discharge events.
+    
+    \item \texttt{trg\_lab\_result\_time} ensures that the result timestamp is automatically captured when a lab report status changes to \texttt{Resulted}.
+\end{itemize}
+% ═════════════════════════════════════════════════════════════════════════════
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Views}
+% ═════════════════════════════════════════════════════════════════════════════
+
+PostgreSQL views enforce role-based data visibility without granting any role direct access to the underlying tables. Each view exposes only the columns and rows that the target role legitimately needs. Lower-privilege roles such as \texttt{patient} and \texttt{nurse} are granted \texttt{SELECT} on their designated views only --- they have no direct table permissions whatsoever.
+
+\subsection{Summary of All Views}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{L{3.5cm} C{1.4cm} L{3.2cm} L{4.5cm}}
+  \rowcolor{tableheader} \theadcell View Name & \theadcell Role & \theadcell Purpose & \theadcell Notable Feature \\
+  \rowcolor{tablerowA} \texttt{vw\_doctor\_case\_dashboard}      & Doctor  & Full case workspace with patient vitals & 8-table join \\
+  \rowcolor{tablerowB} \texttt{vw\_open\_cases\_by\_dept}        & Doctor  & Unassigned open cases for triage & \texttt{WHERE} security filter \\
+  \rowcolor{tablerowA} \texttt{vw\_nurse\_assessment\_dashboard} & Nurse   & Patient assessments with risk flags & Computed \texttt{RiskStatus} \\
+  \rowcolor{tablerowB} \texttt{vw\_patient\_medical\_history}    & Patient & Complete per-case medical history & \texttt{STRING\_AGG}, 14-table join \\
+  \rowcolor{tablerowA} \texttt{vw\_patient\_insurance}           & Patient & Insurance policy details & Computed \texttt{IsCurrentlyValid} \\
+  \rowcolor{tablerowB} \texttt{vw\_doctor\_diagnosis}            & Doctor  & Diagnosis entries with ICD-10 codes & --- \\
+  \rowcolor{tablerowA} \texttt{vw\_doctor\_prescription}         & Doctor  & Prescription records per case & --- \\
+  \rowcolor{tablerowB} \texttt{vw\_doctor\_lab\_reports}         & Doctor  & Lab orders and results & Status label mapping \\
+  \rowcolor{tablerowA} \texttt{vw\_doctor\_profile}              & Doctor  & Specialization and license details & --- \\
+  \rowcolor{tablerowB} \texttt{vw\_nurse\_profile}               & Nurse   & Nurse personal and shift details & \texttt{WHERE EmployeeType} filter \\
+  \rowcolor{tablerowA} \texttt{vw\_patient\_appointments\_bills} & Patient & Appointments and billing summary & --- \\
+  \rowcolor{tablerowB} \texttt{vw\_patient\_lab\_report}         & Patient & Completed lab results only & \texttt{WHERE Status = 'Resulted'} \\
+  \rowcolor{tablerowA} \texttt{vw\_patient\_assessment}          & Patient & Nurse assessment linked to case & --- \\
+  \rowcolor{tablerowB} \texttt{vw\_patient\_prescription}        & Patient & Prescription history & --- \\
+\end{tabular}
+\end{center}
+
+% ════════════════════════════════════════════════════════
+% KEY VIEWS — Full Documentation
+% ════════════════════════════════════════════════════════
+\newpage
+\subsection{Key Views}
+
+The following five views are documented in full due to their non-trivial design decisions --- ranging from complex multi-table joins and embedded row-level security filters to computed columns that encode business logic directly at the database layer, ensuring consistency independent of the application.
+
+% ────────────────────────────────────────────────────────
+\subsection{View 1: \texttt{vw\_doctor\_case\_dashboard}}
+
+\subsubsection{Description}
+This is the primary workspace for a doctor. It joins \texttt{CaseRequest} across eight tables --- patient demographics, doctor profile, nurse record, department, room, and initial assessment --- so the doctor sees every assigned case with full clinical context in a single query. No direct table access is required by the \texttt{doctor} role.
+
+\subsubsection{Justification}
+A doctor needs patient vitals, assessment details, room information, and case status all in one place to make clinical decisions efficiently. Without this view, the frontend would need to issue multiple separate queries across \texttt{CaseRequest}, \texttt{Patient}, \texttt{PatientAssessment}, and \texttt{Room}, creating both a performance overhead and a risk of inconsistent data if any query fails. By consolidating everything into one view, we also ensure the doctor role never touches tables like \texttt{PatientAssessment} or \texttt{Room} directly, keeping sensitive admission and billing data completely out of reach. This view is the single source of truth for the doctor's case management interface.
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE VIEW vw_doctor_case_dashboard AS
+SELECT
+    cr.CaseRequestID,
+    cr.Status                                   AS CaseStatus,
+    cr.Urgency,
+    cr.CaseSummary,
+    cr.IsAdmitted,
+    cr.AdmittedOn,
+    cr.DischargedOn,
+    cr.CreatedOn                                AS CaseCreatedOn,
+
+    p.PatientID,
+    p.FirstName || ' ' || p.LastName            AS PatientName,
+    p.DateOfBirth,
+    p.Gender,
+    p.BloodGroup,
+    p.PhoneNumber                               AS PatientPhone,
+
+    e.EmployeeID                                AS DoctorEmployeeID,
+    e.FirstName || ' ' || e.LastName            AS DoctorName,
+    dp.Specialization,
+
+    ne.FirstName || ' ' || ne.LastName          AS NurseName,
+    d.Name                                      AS Department,
+    r.RoomNumber,
+    r.Type                                      AS RoomType,
+
+    pa.Symptoms,
+    pa.Condition,
+    pa.Temperature,
+    pa.SystolicBP,
+    pa.DiastolicBP,
+    pa.PulseRate,
+    pa.OxygenLevel,
+    pa.BloodSugar,
+    pa.AssessedOn
+
+FROM CaseRequest cr
+JOIN Patient            p   ON cr.PatientID        = p.PatientID
+JOIN Employee           e   ON cr.DoctorEmployeeID = e.EmployeeID
+JOIN DoctorProfile      dp  ON e.EmployeeID        = dp.EmployeeID
+LEFT JOIN Employee      ne  ON cr.NurseEmployeeID  = ne.EmployeeID
+JOIN Department         d   ON cr.AssignedDeptID   = d.DepartmentID
+LEFT JOIN Room          r   ON cr.RoomID           = r.RoomID
+LEFT JOIN PatientAssessment pa ON cr.AssessmentID  = pa.AssessmentID;
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────
+\subsection{View 2: \texttt{vw\_open\_cases\_by\_dept}}
+
+\subsubsection{Description}
+This view is the triage queue from which doctors browse and accept incoming cases. The \texttt{WHERE} clause --- \texttt{Status = 'Open' AND DoctorEmployeeID IS NULL} --- is enforced at the database level, so rejected, in-progress, or already-assigned cases are structurally invisible to any consumer of this view, regardless of application logic.
+
+\subsubsection{Justification}
+In a multi-doctor hospital environment, it is critical that only genuinely available cases appear in the acceptance queue. If this filter lived in application code instead of the view, a bug or a malicious API call could expose in-progress or resolved cases to other doctors, leaking private patient data across department boundaries. By embedding the filter in the view definition, we guarantee at the database level that a doctor can never accidentally accept a case already being handled, and can never see cases from other departments. This view also removes the need for the frontend to construct complex \texttt{WHERE} clauses, reducing the attack surface for SQL injection or logic errors.
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE VIEW vw_open_cases_by_dept AS
+SELECT
+    cr.CaseRequestID,
+    cr.Status                               AS CaseStatus,
+    cr.Urgency,
+    cr.CaseSummary,
+    cr.CreatedOn                            AS CaseCreatedOn,
+
+    p.PatientID,
+    p.FirstName || ' ' || p.LastName        AS PatientName,
+    p.DateOfBirth,
+    p.Gender,
+    p.BloodGroup,
+    p.PhoneNumber                           AS PatientPhone,
+
+    pa.Symptoms,
+    pa.Condition,
+    pa.Temperature,
+    pa.SystolicBP,
+    pa.DiastolicBP,
+    pa.PulseRate,
+    pa.OxygenLevel,
+    pa.BloodSugar,
+    pa.AssessedOn,
+
+    ne.FirstName || ' ' || ne.LastName      AS NurseName,
+    d.DepartmentID,
+    d.Name                                  AS Department
+
+FROM CaseRequest cr
+JOIN Patient            p   ON cr.PatientID         = p.PatientID
+JOIN Department         d   ON cr.AssignedDeptID    = d.DepartmentID
+JOIN Employee           ne  ON cr.NurseEmployeeID   = ne.EmployeeID
+LEFT JOIN PatientAssessment pa ON cr.AssessmentID   = pa.AssessmentID
+WHERE cr.Status = 'Open' AND cr.DoctorEmployeeID IS NULL;
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────
+\subsection{View 3: \texttt{vw\_nurse\_assessment\_dashboard}}
+
+\subsubsection{Description}
+This is the primary dashboard for nurses. The computed \texttt{RiskStatus} column categorises each assessment into \texttt{HIGH RISK}, \texttt{LOW OXYGEN}, \texttt{HIGH BP}, or \texttt{STABLE} based on the recorded vitals using a \texttt{CASE} expression inside the view definition.
+
+\subsubsection{Justification}
+Nurses are the first responders in the system and need to immediately identify high-risk patients without manually interpreting raw vital numbers. Placing the \texttt{CASE} logic inside the view rather than in application code means the risk classification rules are defined once, centrally, and are always consistent --- a nurse using the web portal, the mobile app, or a direct database query will always see the same \texttt{RiskStatus}. Without this view, every frontend would need to duplicate the threshold logic (\texttt{OxygenLevel < 90}, \texttt{SystolicBP > 160}), creating a maintenance risk where one interface might use different thresholds than another. The nurse role is granted access to this view only, so it cannot query raw vitals from \texttt{PatientAssessment} directly.
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE VIEW vw_nurse_assessment_dashboard AS
+SELECT
+    pa.AssessmentID,
+    pa.PatientID,
+    p.FirstName || ' ' || p.LastName    AS PatientName,
+    pa.NurseEmployeeID,
+    e.FirstName || ' ' || e.LastName    AS NurseName,
+    pa.Symptoms,
+    pa.Condition,
+    pa.Temperature,
+    pa.SystolicBP,
+    pa.DiastolicBP,
+    pa.PulseRate,
+    pa.OxygenLevel,
+    pa.BloodSugar,
+    pa.Notes,
+    pa.AssessedOn,
+    CASE
+        WHEN pa.Condition   = 'Critical' THEN 'HIGH RISK'
+        WHEN pa.OxygenLevel < 90         THEN 'LOW OXYGEN'
+        WHEN pa.SystolicBP  > 160        THEN 'HIGH BP'
+        ELSE 'STABLE'
+    END AS RiskStatus
+FROM PatientAssessment pa
+JOIN Patient  p ON pa.PatientID        = p.PatientID
+JOIN Employee e ON pa.NurseEmployeeID  = e.EmployeeID;
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────
+\vspace{1em}
+\vspace{1em}
+\vspace{1em}
+\subsection{View 4: \texttt{vw\_patient\_medical\_history}}
+
+\subsubsection{Description}
+This is the most complex view in the system. It spans 14 tables and uses \texttt{STRING\_AGG(DISTINCT ...)} to collapse multiple disease rows per case into a single comma-separated string, flattening the many-to-many \texttt{Diagnosis} relationship so the patient portal can display a clean case timeline with one row per case per prescription.
+
+\subsubsection{Justification}
+A patient has a legitimate right to see their complete medical history --- every case, every diagnosis, every prescription, and the corresponding bill --- in a single unified view. Without this view, the patient portal would need to perform at least six separate queries and then join and aggregate the results in application code, which is both inefficient and error-prone. More importantly, without this view the \texttt{patient} role would need direct \texttt{SELECT} access to sensitive tables like \texttt{Diagnosis}, \texttt{Prescription}, and \texttt{Bill}, exposing columns such as internal disease IDs and raw billing components that patients should never see. The \texttt{STRING\_AGG} aggregation also means the patient sees a readable list of disease names rather than raw foreign keys, making the data immediately meaningful. In a production system this view would be a candidate for materialisation due to its join depth.
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE VIEW vw_patient_medical_history AS
+SELECT
+    p.PatientID,
+    p.FirstName || ' ' || p.LastName            AS PatientName,
+    p.DateOfBirth,
+    p.Gender,
+    p.BloodGroup,
+    p.Height,
+    p.Weight,
+
+    cr.CaseRequestID,
+    cr.Status                                   AS CaseStatus,
+    cr.Urgency,
+    cr.CaseSummary,
+    cr.IsAdmitted,
+    cr.AdmittedOn,
+    cr.DischargedOn,
+    cr.CreatedOn                                AS CaseDate,
+
+    pa.Symptoms,
+    pa.Condition,
+    pa.Temperature,
+    pa.SystolicBP,
+    pa.DiastolicBP,
+    pa.PulseRate,
+    pa.OxygenLevel,
+    pa.BloodSugar,
+    pa.AssessedOn,
+
+    e.FirstName || ' ' || e.LastName            AS DoctorName,
+    dp.Specialization,
+    d.Name                                      AS Department,
+    r.RoomNumber,
+    r.Type                                      AS RoomType,
+
+    -- Collapse multiple diseases per case into one row
+    STRING_AGG(DISTINCT dis.Name,      ', ')    AS Diseases,
+    STRING_AGG(DISTINCT dis.ICD10Code, ', ')    AS ICD10Codes,
+
+    pr.Medicines,
+    pr.Instructions,
+    pr.PrescribedOn,
+    b.TotalAmount,
+    b.PaymentStatus
+
+FROM Patient p
+LEFT JOIN CaseRequest       cr  ON p.PatientID          = cr.PatientID
+LEFT JOIN PatientAssessment pa  ON cr.AssessmentID      = pa.AssessmentID
+LEFT JOIN Employee          e   ON cr.DoctorEmployeeID  = e.EmployeeID
+LEFT JOIN DoctorProfile     dp  ON e.EmployeeID         = dp.EmployeeID
+LEFT JOIN Department        d   ON cr.AssignedDeptID    = d.DepartmentID
+LEFT JOIN Room              r   ON cr.RoomID            = r.RoomID
+LEFT JOIN Diagnosis         dg  ON cr.CaseRequestID     = dg.CaseRequestID
+LEFT JOIN Disease           dis ON dg.DiseaseID         = dis.DiseaseID
+LEFT JOIN Prescription      pr  ON cr.CaseRequestID     = pr.CaseRequestID
+LEFT JOIN Bill              b   ON cr.CaseRequestID     = b.CaseRequestID
+GROUP BY
+    p.PatientID, p.FirstName, p.LastName,
+    p.DateOfBirth, p.Gender, p.BloodGroup, p.Height, p.Weight,
+    cr.CaseRequestID, cr.Status, cr.Urgency, cr.CaseSummary,
+    cr.IsAdmitted, cr.AdmittedOn, cr.DischargedOn, cr.CreatedOn,
+    pa.Symptoms, pa.Condition, pa.Temperature, pa.SystolicBP,
+    pa.DiastolicBP, pa.PulseRate, pa.OxygenLevel, pa.BloodSugar,
+    pa.AssessedOn,
+    e.FirstName, e.LastName, dp.Specialization, d.Name,
+    r.RoomNumber, r.Type,
+    pr.Medicines, pr.Instructions, pr.PrescribedOn,
+    b.TotalAmount, b.PaymentStatus;
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────
+\subsection{View 5: \texttt{vw\_patient\_insurance}}
+
+\subsubsection{Description}
+This view exposes a patient's insurance policies by joining \texttt{PatientInsurance} with the \texttt{Insurance} master table. The computed boolean column \texttt{IsCurrentlyValid} evaluates whether the policy is both \texttt{Active} and within its validity dates in a single \texttt{CASE} expression.
+
+\subsubsection{Justification}
+Insurance validity is a time-sensitive, frequently checked piece of information --- it directly affects whether a bill is covered and what a patient owes. Without this view, every part of the system that needs to check coverage (billing engine, patient portal, admin dashboard) would need to independently evaluate the \texttt{ValidTo >= CURRENT\_DATE AND Status = 'Active'} condition, leading to duplicated logic that could drift out of sync across different parts of the codebase. By computing \texttt{IsCurrentlyValid} once inside the view, we ensure a single authoritative definition of what ``valid insurance'' means in this system. The \texttt{patient} role can read this view but has no access to the \texttt{PatientInsurance} or \texttt{Insurance} tables directly, preventing patients from seeing other patients' policy data or raw provider pricing structures.
+
+\subsubsection{SQL Code}
+
+\begin{lstlisting}
+CREATE OR REPLACE VIEW vw_patient_insurance AS
+SELECT
+    pi.PatientInsuranceID,
+    pi.PolicyNumber,
+    pi.CoveragePercent,
+    pi.CoPay,
+    pi.ValidFrom,
+    pi.ValidTo,
+    pi.Status                           AS InsuranceStatus,
+    pi.CreatedOn                        AS EnrolledOn,
+    ins.ProviderName,
+    ins.PlanName,
+    ins.PlanType,
+    ins.ContactNumber                   AS ProviderContact,
+    ins.Website                         AS ProviderWebsite,
+    p.PatientID,
+    p.FirstName || ' ' || p.LastName   AS PatientName,
+    CASE
+        WHEN pi.ValidTo >= CURRENT_DATE AND pi.Status = 'Active' THEN TRUE
+        ELSE FALSE
+    END                                 AS IsCurrentlyValid
+FROM PatientInsurance pi
+JOIN Insurance  ins ON pi.InsuranceID = ins.InsuranceID
+JOIN Patient    p   ON pi.PatientID   = p.PatientID;
+\end{lstlisting}
+
+% ════════════════════════════════════════════════════════
+% REMAINING VIEWS — Summary Table
+% ════════════════════════════════════════════════════════
+\newpage
+\subsection{Remaining Views}
+
+The following nine views follow a straightforward single-role, single-concern pattern. Each joins a small number of tables to expose a specific slice of data to its target role.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.8}
+\begin{tabular}{L{3.2cm} C{1.3cm} L{8cm}}
+  \rowcolor{tableheader}
+  \theadcell View Name & \theadcell Role & \theadcell Justification \\
+
+  \rowcolor{tablerowA}
+  \texttt{vw\_doctor\_diagnosis} & Doctor &
+  Shields the doctor from internal audit columns in the \texttt{Diagnosis} table; exposes only clinically relevant fields like disease name, ICD-10 code, and severity \\
+
+  \rowcolor{tablerowB}
+  \texttt{vw\_doctor\_prescription} & Doctor &
+  Doctor can read prescriptions without direct write access to the \texttt{Prescription} table; all modifications are routed through functions \\
+
+  \rowcolor{tablerowA}
+  \texttt{vw\_doctor\_lab\_reports} & Doctor &
+  Computed \texttt{StatusLabel} and \texttt{IsPending} remove enum interpretation from the frontend; doctor sees both pending and completed tests in one place \\
+
+  \rowcolor{tablerowB}
+  \texttt{vw\_doctor\_profile} & Doctor &
+  Omits salary, personal address, and admin fields from the \texttt{Employee} table; exposes only specialization, license, and consultation fee \\
+
+  \rowcolor{tablerowA}
+  \texttt{vw\_nurse\_profile} & Nurse &
+  \texttt{WHERE EmployeeType = 'Nurse'} prevents nurses from seeing doctor or admin profiles; shift and department details are included for scheduling \\
+
+  \rowcolor{tablerowB}
+  \texttt{vw\_patient\_appointments\_bills} & Patient &
+  Avoids granting the patient direct access to the \texttt{Bill} table; combines appointment schedule and financial summary in one query \\
+
+  \rowcolor{tablerowA}
+  \texttt{vw\_patient\_lab\_report} & Patient &
+  \texttt{WHERE Status = 'Resulted'} hides pending and in-progress tests; patients only see finalised results with normal range for self-interpretation \\
+
+  \rowcolor{tablerowB}
+  \texttt{vw\_patient\_assessment} & Patient &
+  Patients see their initial care assessment and linked case status without touching the raw \texttt{PatientAssessment} table \\
+
+  \rowcolor{tablerowA}
+  \texttt{vw\_patient\_prescription} & Patient &
+  Exposes medicines and instructions with doctor context while hiding internal prescription IDs and case management columns \\
+
+\end{tabular}
+\end{center}
+% ────────────────────────────────────────────────────────
+\subsection{Role of Views in Preserving Data Security}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{No direct table access for lower roles} --- The \texttt{doctor}, \texttt{nurse}, and \texttt{patient} roles hold \texttt{SELECT} rights only on their designated views. No role below \texttt{admin} can query base tables directly.
+
+    \item \textbf{Row-level filtering at the database} --- Security-critical filters such as \texttt{WHERE Status = 'Open'} in \texttt{vw\_open\_cases\_by\_dept} and \texttt{WHERE Status = 'Resulted'} in \texttt{vw\_patient\_lab\_report} are enforced inside the view definition, not in application code, making them impossible to bypass at the SQL level.
+
+    \item \textbf{Computed columns replace application logic} --- \texttt{RiskStatus} and \texttt{IsCurrentlyValid} are derived inside the database, ensuring consistent business logic regardless of which client or API version is consuming the data.
+
+    \item \textbf{Aggregation hides raw join complexity} --- \texttt{STRING\_AGG} in \texttt{vw\_patient\_medical\_history} collapses the many-to-many disease relationship into a readable string, shielding the patient portal from the underlying \texttt{Diagnosis} join table entirely.
+\end{itemize}
+
+ \newpage
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Roles and Privileges}
+% ═════════════════════════════════════════════════════════════════════════════
+ 
+PostgreSQL's role-based access control (RBAC) is used to enforce the principle of least privilege. Four database roles are defined — one per application user type — and each role is granted only the permissions it requires to perform its designated operations.
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Role Definitions}
+% ─────────────────────────────────────────────────────────────────────────────
+ 
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{L{3cm} L{9.5cm}}
+\rowcolor{tableheader} \theadcell Role & \theadcell Responsibilities \\
+\rowcolor{tablerowA} \texttt{admin}   & Full system access; registers patients, manages staff, generates bills, and manages all views \\
+\rowcolor{tablerowB} \texttt{doctor}  & Views case dashboards, diagnosis, prescriptions, lab reports; accepts/rejects cases; orders tests and adds diagnoses \\
+\rowcolor{tablerowA} \texttt{nurse}   & Creates case requests, records vitals, fills lab reports; views own assessment dashboard \\
+\rowcolor{tablerowB} \texttt{patient} & Views own portal, medical history, appointments, bills, and lab reports; submits feedback; updates contact details \\
+\end{tabular}
+\end{center}
+ 
+\subsubsection{SQL Code --- Role Creation}
+ 
+\begin{lstlisting}
+-- Create roles with login capability
+CREATE ROLE admin   LOGIN PASSWORD 'admin123';
+CREATE ROLE doctor  LOGIN PASSWORD 'doctor123';
+CREATE ROLE nurse   LOGIN PASSWORD 'nurse123';
+CREATE ROLE patient LOGIN PASSWORD 'patient123';
+\end{lstlisting}
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Admin Privileges}
+% ─────────────────────────────────────────────────────────────────────────────
+ 
+The \texttt{admin} role is granted full access to all tables, all views, and all functions it needs to orchestrate system-wide operations.
+ 
+\begin{lstlisting}
+-- Full table and sequence access
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
+ 
+-- Full access to all views
+GRANT ALL PRIVILEGES ON
+    vw_doctor_case_dashboard,
+    vw_doctor_diagnosis,
+    vw_doctor_lab_reports,
+    vw_doctor_prescription,
+    vw_doctor_profile,
+    vw_nurse_assessment_dashboard,
+    vw_nurse_profile,
+    vw_open_cases_by_dept,
+    vw_patient_appointments_bills,
+    vw_patient_assessment,
+    vw_patient_insurance,
+    vw_patient_lab_report,
+    vw_patient_medical_history,
+    vw_patient_prescription
+TO admin;
+ 
+-- Execute all key functions
+GRANT EXECUTE ON FUNCTION
+    fn_accept_reject_case(INT, INT, VARCHAR, TEXT),
+    fn_add_diagnosis(INT, INT, severity_type, TEXT, INT),
+    fn_create_case_request(
+        INT, INT, TEXT, condition_type,
+        DECIMAL, INT, INT, INT, DECIMAL, DECIMAL,
+        TEXT, INT, case_urgency, TEXT),
+    fn_free_room_on_resolve(),
+    fn_generate_bill(INT),
+    fn_register_patient(
+        VARCHAR, VARCHAR, DATE, gender_type,
+        VARCHAR, VARCHAR, blood_group,
+        DECIMAL, DECIMAL,
+        VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT)
+TO admin;
+\end{lstlisting}
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Doctor Privileges}
+% ─────────────────────────────────────────────────────────────────────────────
+ 
+The \texttt{doctor} role can read relevant views and master tables, and execute the functions needed to manage cases and order clinical work.
+ 
+\begin{lstlisting}
+-- Read access to relevant views and lookup tables
+GRANT SELECT ON
+    vw_doctor_case_dashboard,
+    vw_open_cases_by_dept,
+    vw_doctor_diagnosis,
+    vw_doctor_profile,
+    vw_doctor_prescription,
+    vw_doctor_lab_reports,
+    LabTest,
+    Disease
+TO doctor;
+ 
+-- Execute clinical functions
+GRANT ALL PRIVILEGES ON FUNCTION
+    fn_accept_reject_case(INT, INT, VARCHAR, TEXT)
+TO doctor;
+ 
+GRANT ALL PRIVILEGES ON FUNCTION
+    fn_add_diagnosis(INT, INT, severity_type, TEXT, INT)
+TO doctor;
+ 
+GRANT ALL PRIVILEGES ON FUNCTION
+    fn_order_lab_test(INT, INT, INT)
+TO doctor;
+\end{lstlisting}
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Nurse Privileges}
+% ─────────────────────────────────────────────────────────────────────────────
+ 
+The \texttt{nurse} role is permitted to create case requests, record vitals, and fill lab reports, but cannot access billing or diagnostic data.
+ 
+\begin{lstlisting}
+-- Read access to nurse-specific views
+GRANT SELECT ON vw_nurse_profile               TO nurse;
+GRANT SELECT ON vw_nurse_assessment_dashboard  TO nurse;
+GRANT SELECT ON vw_open_cases_by_dept         TO nurse;
+ 
+-- Execute nursing workflow functions
+GRANT ALL PRIVILEGES ON FUNCTION
+    fn_create_case_request(
+        INT, INT, TEXT, condition_type,
+        DECIMAL, INT, INT, INT, DECIMAL, DECIMAL,
+        TEXT, INT, case_urgency, TEXT)
+TO nurse;
+ 
+GRANT ALL PRIVILEGES ON FUNCTION
+    fn_nurse_fill_lab_report(INT, INT, VARCHAR)
+TO nurse;
+\end{lstlisting}
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Patient Privileges}
+% ─────────────────────────────────────────────────────────────────────────────
+ 
+The \texttt{patient} role has highly restricted access: read-only views of their own records, limited column-level update rights on their own profile, and access to the feedback function.
+ 
+\begin{lstlisting}
+-- Read-only access to own data via views
+GRANT SELECT ON vw_patient_appointments_bills  TO patient;
+GRANT SELECT ON vw_patient_medical_history     TO patient;
+GRANT SELECT ON vw_patient_lab_report          TO patient;
+GRANT SELECT ON vw_patient_assessment          TO patient;
+GRANT SELECT ON vw_patient_insurance           TO patient;
+GRANT SELECT ON vw_patient_prescription        TO patient;
+ 
+-- Limited column-level update on own contact details
+GRANT UPDATE (
+    PhoneNumber,
+    EmergencyContact,
+    AddressLine1,
+    AddressLine2,
+    City,
+    State,
+    PostalCode,
+    Country,
+    ProfilePicture
+) ON Patient TO patient;
+ 
+-- Execute patient-facing functions
+GRANT ALL PRIVILEGES ON FUNCTION
+    fn_submit_feedback(INT, INT, INT, SMALLINT, TEXT)
+TO patient;
+\end{lstlisting}
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Privilege Summary Table}
+% ─────────────────────────────────────────────────────────────────────────────
+ 
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{L{5.5cm} C{1.8cm} C{1.8cm} C{1.8cm} C{1.8cm}}
+\rowcolor{tableheader}
+\theadcell Privilege / Resource &
+\theadcell Admin &
+\theadcell Doctor &
+\theadcell Nurse &
+\theadcell Patient \\
+
+ 
+\rowcolor{tablerowA} All Tables (Full)               & \yes & \no & \no & \no \\
+\rowcolor{tablerowB} All Views (Full)                & \yes & \no & \no & \no \\
+\rowcolor{tablerowA} Doctor Views (Read)             & \yes & \yes & \no & \no \\
+\rowcolor{tablerowB} Nurse Views (Read)              & \yes & \no & \yes & \no \\
+\rowcolor{tablerowA} Patient Views (Read)            & \yes & \no        & \no        & \yes \\
+\rowcolor{tablerowB} \texttt{fn\_register\_patient}  & \yes & \no        & \no        & \no \\
+\rowcolor{tablerowA} \texttt{fn\_create\_case\_request} & \yes & \no     & \yes & \no \\
+\rowcolor{tablerowB} \texttt{fn\_accept\_reject\_case}  & \yes & \yes & \no     & \no \\
+\rowcolor{tablerowA} \texttt{fn\_add\_diagnosis}     & \yes & \yes & \no        & \no \\
+\rowcolor{tablerowB} \texttt{fn\_order\_lab\_test}   & \yes & \yes & \no        & \no \\
+\rowcolor{tablerowA} \texttt{fn\_nurse\_fill\_lab\_report} & \yes & \no & \yes & \no \\
+\rowcolor{tablerowB} \texttt{fn\_generate\_bill}     & \yes & \no        & \no        & \yes \\
+\rowcolor{tablerowA} \texttt{fn\_submit\_feedback}   & \yes & \no        & \no        & \yes \\
+\rowcolor{tablerowB} \texttt{fn\_free\_room\_on\_resolve} & \yes & \no   & \no        & \no \\
+\rowcolor{tablerowA} Patient UPDATE (contact cols)   & \yes & \no        & \no        & \yes \\
+\end{tabular}
+\end{center}
+ 
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Security Design Rationale}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{Least Privilege Enforcement} --- Each role receives only the minimum access required for its specific workflow. For example, nurses cannot view sensitive billing data, and patients cannot access other patients' records, ensuring strict data isolation.
+ 
+    \item \textbf{View-Based Security Layer} --- All sensitive queries are exposed to lower-privilege roles through views rather than direct table access. These views enforce row-level filtering and column-masking at the database level, making security logic impossible to bypass via the application layer.
+ 
+    \item \textbf{Controlled Transitions via SECURITY DEFINER} --- Core transactional functions (\texttt{fn\_register\_patient}, \texttt{fn\_create\_case\_request}, etc.) are defined with \texttt{SECURITY DEFINER}. This allows the system to perform high-privilege write operations (like registering a user) while subjecting the input to rigorous, centralized validation logic.
+ 
+    \item \textbf{Granular Column-Level Grants} --- The \texttt{patient} role is granted \texttt{UPDATE} privileges only on non-clinical contact columns. This prevents unauthorized modification of medical history or administrative status while still allowing self-service profile updates.
+ 
+    \item \textbf{Encapsulated Business Logic} --- By routing all DML operations through stored functions, we ensure that ACID properties are maintained and that business rules (like double-booking prevention) are enforced consistently across all platforms (web, mobile, or direct SQL).
+\end{itemize}
+ 
+% ═════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Indices}
+% ═════════════════════════════════════════════════════════════════════════════
+
+In addition to the default primary key indices automatically created by PostgreSQL, the following custom indices have been defined to optimise the most frequent query patterns in the Hospital Management System.
+
+\subsection{List of Additional Indices}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{L{5cm} L{4cm} L{4.5cm}}
+  \rowcolor{tableheader} \theadcell Index Name & \theadcell Table(Column) & \theadcell Purpose \\
+  \rowcolor{tablerowA} \texttt{idx\_users\_email\_lower}  & \texttt{users(LOWER(Email))} & Unique case-insensitive index for fast login lookups \\
+  \rowcolor{tablerowB} \texttt{idx\_caserequest\_patient} & \texttt{CaseRequest(PatientID)} & Speeds up retrieval of all cases for a patient \\
+  \rowcolor{tablerowA} \texttt{idx\_caserequest\_status}  & \texttt{CaseRequest(Status)} & Optimises dashboard filtering for open/active cases \\
+  \rowcolor{tablerowB} \texttt{idx\_caserequest\_doctor}  & \texttt{CaseRequest(DoctorEmployeeID)} & Speeds up fetching all cases assigned to a doctor \\
+  \rowcolor{tablerowA} \texttt{idx\_appointment\_date}    & \texttt{Appointment(AppointmentDate)} & Optimises calendar and schedule queries by date \\
+  \rowcolor{tablerowB} \texttt{idx\_appointment\_patient} & \texttt{Appointment(PatientID)} & Fast lookup of all appointments for a given patient \\
+  \rowcolor{tablerowA} \texttt{idx\_labreport\_patient}   & \texttt{LabReport(PatientID)} & Speeds up fetching all lab tests for a patient \\
+  \rowcolor{tablerowB} \texttt{idx\_labreport\_status}    & \texttt{LabReport(Status)} & Optimises queries filtering by lab report status \\
+  \rowcolor{tablerowA} \texttt{idx\_labreport\_unbilled}  & \texttt{LabReport(IsBilled) WHERE FALSE} & \textbf{Partial index} targeting only unbilled reports for billing engine \\
+  \rowcolor{tablerowB} \texttt{idx\_bill\_caserequest}    & \texttt{Bill(CaseRequestID)} & Optimises financial record joins on case-to-bill \\
+  \rowcolor{tablerowA} \texttt{idx\_bill\_paymentstatus}  & \texttt{Bill(PaymentStatus)} & Fast retrieval of all pending or unpaid bills \\
+  \rowcolor{tablerowB} \texttt{idx\_feedback\_doctor}     & \texttt{Feedback(DoctorEmployeeID)} & Supports doctor performance rating queries \\
+  \rowcolor{tablerowA} \texttt{idx\_feedback\_nurse}      & \texttt{Feedback(NurseEmployeeID)} & Supports nurse performance rating queries \\
+\end{tabular}
+\end{center}
+
+\subsection{Frequent Queries That Use These Indices}
+
+The following five representative queries demonstrate how the above indices are used in real clinical workflows.
+
+\subsubsection{Query 1 --- Login (uses \texttt{idx\_users\_email\_lower})}
+This query is executed on every login attempt. The partial unique index on \texttt{LOWER(Email)} allows the database to locate a user by email in O(log n) time regardless of how the email was typed.
+
+\begin{lstlisting}
+-- Used by the login API endpoint for all roles
+SELECT UserID, Role, PasswordHash
+FROM users
+WHERE LOWER(Email) = LOWER('doctor@nexushealth.in');
+\end{lstlisting}
+
+\subsubsection{Query 2 --- Doctor's Active Cases (uses \texttt{idx\_caserequest\_doctor} + \texttt{idx\_caserequest\_status})}
+This query powers the doctor's dashboard and runs frequently throughout the day. The compound use of both indices allows PostgreSQL to filter first on \texttt{DoctorEmployeeID} and then on \texttt{Status} without a full table scan.
+
+\begin{lstlisting}
+-- Doctor's case management dashboard
+SELECT * FROM vw_doctor_case_dashboard
+WHERE DoctorEmployeeID = 5
+  AND CaseStatus IN ('Accepted', 'InProgress');
+\end{lstlisting}
+
+\subsubsection{Query 3 --- Patient Medical History (uses \texttt{idx\_caserequest\_patient})}
+This query retrieves the longitudinal medical history for a given patient. The index on \texttt{PatientID} in \texttt{CaseRequest} allows the underlying join in \texttt{vw\_patient\_medical\_history} to skip to the relevant rows immediately.
+
+\begin{lstlisting}
+-- Patient portal: view complete medical timeline
+SELECT * FROM vw_patient_medical_history
+WHERE PatientID = 12;
+\end{lstlisting}
+
+\subsubsection{Query 4 --- Billing Engine: Unbilled Lab Tests (uses \texttt{idx\_labreport\_unbilled})}
+The billing function \texttt{fn\_generate\_bill()} sums lab charges for a case. The partial index \texttt{idx\_labreport\_unbilled} contains only rows where \texttt{IsBilled = FALSE}, making this aggregation extremely efficient since the billing engine only ever processes unbilled entries.
+
+\begin{lstlisting}
+-- Called internally by fn_generate_bill()
+SELECT COALESCE(SUM(lt.Price), 0)
+FROM LabReport lr
+JOIN LabTest lt ON lr.LabTestID = lt.LabTestID
+WHERE lr.CaseRequestID = 7
+  AND lr.IsBilled = FALSE;
+\end{lstlisting}
+
+\subsubsection{Query 5 --- Admin: All Pending Bills (uses \texttt{idx\_bill\_paymentstatus})}
+The admin dashboard tracks all outstanding payments. The index on \texttt{PaymentStatus} avoids a full scan of the \texttt{Bill} table, returning only pending records instantly.
+
+\begin{lstlisting}
+-- Admin financial overview: all unpaid bills
+SELECT b.BillID, b.TotalAmount, b.GeneratedOn,
+       p.FirstName || ' ' || p.LastName AS PatientName
+FROM Bill b
+JOIN CaseRequest cr ON b.CaseRequestID = cr.CaseRequestID
+JOIN Patient     p  ON cr.PatientID    = p.PatientID
+WHERE b.PaymentStatus = 'Pending'
+ORDER BY b.GeneratedOn DESC;
+\end{lstlisting}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Conclusion}
+% ═════════════════════════════════════════════════════════════════════════════
+
+The Hospital Management System represents a comprehensive, end-to-end application of every major concept covered in DS3020 Database Systems. This project went beyond building a simple CRUD application --- it required us to reason carefully about data modelling, integrity, security, and performance at every layer of the database design.
+
+\subsection{How Course Concepts Were Applied}
+
+\begin{itemize}[leftmargin=1.5cm]
+
+  \item \textbf{Relational Modelling and Normalisation (1NF, 2NF, 3NF)} ---
+  The database is structured across \textbf{17 normalised tables}. We deliberately decomposed entities like \texttt{Employee} and \texttt{Patient} to avoid repeating groups (1NF), ensured all non-key attributes depend on the entire primary key (2NF via the \texttt{Diagnosis} composite key), and eliminated transitive dependencies by keeping \texttt{RoomNumber} and \texttt{PricePerNight} in the \texttt{Room} table rather than duplicating them in \texttt{CaseRequest} (3NF). ENUM types enforced domain integrity throughout.
+
+  \item \textbf{Entity-Relationship Modelling} ---
+  The ER diagram captures all four principal entities (Patient, Employee, CaseRequest, and Bill) and their relationships including 1:1, 1:N, and M:N cardinalities. The many-to-many relationship between \texttt{CaseRequest} and \texttt{Disease} is resolved through the \texttt{Diagnosis} junction table with a composite primary key, precisely as taught in the ER-to-relational mapping lectures.
+
+  \item \textbf{Integrity Constraints} ---
+  We applied every constraint type from the course: \texttt{PRIMARY KEY} and \texttt{FOREIGN KEY} for referential integrity, \texttt{UNIQUE} for business identifiers (email, room number, license), \texttt{NOT NULL} for mandatory fields, \texttt{CHECK} for domain validation (\texttt{Rating BETWEEN 1 AND 5}, \texttt{TotalAmount = sum of charges}), and \texttt{DEFAULT} for automatic timestamp and status population.
+
+  \item \textbf{SQL Functions and Stored Procedures} ---
+  Nine \texttt{SECURITY DEFINER} functions were implemented, one for each principal operation across all four roles. These functions encapsulate multi-step transactions (e.g., \texttt{fn\_create\_case\_request} atomically inserts a \texttt{PatientAssessment} and a \texttt{CaseRequest}), enforce complex business rules (e.g., \texttt{fn\_accept\_reject\_case} validates department ownership, availability, and status transitions), and return structured result sets. This directly applies the stored procedure and function concepts from the course.
+
+  \item \textbf{Triggers} ---
+  Seven triggers automate reactive database behaviour: preventing double booking of appointments, auto-resolving cases on discharge, recalculating bill totals, synchronising room occupancy, timestamping lab results, and dispatching emergency notifications. Each trigger demonstrates the event-condition-action model taught in class --- the database itself, not the application, enforces these invariants.
+
+  \item \textbf{Views and Data Abstraction} ---
+  Fourteen views implement the \textbf{data abstraction} principle from the course. Views such as \texttt{vw\_patient\_medical\_history} (a 14-table join with \texttt{STRING\_AGG} aggregation) and \texttt{vw\_nurse\_assessment\_dashboard} (with a computed \texttt{RiskStatus} column) demonstrate how complex query logic can be hidden behind a simple, stable interface for the application layer.
+
+  \item \textbf{Role-Based Access Control (RBAC)} ---
+  The four PostgreSQL roles (\texttt{admin}, \texttt{doctor}, \texttt{nurse}, \texttt{patient}) directly implement the access control concepts from the course. No role below \texttt{admin} accesses base tables directly. The \texttt{SECURITY DEFINER} pattern allows controlled privilege escalation within functions, mirroring the principle of minimal privilege taught in the security module.
+
+  \item \textbf{Indexing and Query Optimisation} ---
+  Thirteen custom indices were created beyond default primary key indices, including a \textbf{partial index} (\texttt{idx\_labreport\_unbilled}) and a \textbf{functional index} (\texttt{idx\_users\_email\_lower}). These apply the B-Tree indexing concepts and partial index optimisation strategies covered in the performance lectures, directly reducing the cost of the system's most frequent queries.
+
+  \item \textbf{ACID Transactions} ---
+  Every stored function wraps its DML operations in an implicit transaction, with \texttt{EXCEPTION WHEN OTHERS THEN RAISE EXCEPTION} blocks ensuring that any validation failure causes a full rollback. The \texttt{fn\_create\_case\_request} function, for example, atomically inserts two records --- if the second insert fails, the first is rolled back, maintaining consistency.
+
+  \item \textbf{Frontend Integration} ---
+  The database was integrated with a React.js + Node.js (Express) REST API backend. All 9 functions are called via dedicated API endpoints, the views power real-time dashboards for each role, and JWT-based authentication maps to the corresponding PostgreSQL role at the session level. This end-to-end integration demonstrates that the theoretical DBMS concepts translate directly into a production-grade clinical application.
+
+\end{itemize}
+
+\end{document}

@@ -42,14 +42,14 @@ const LoginPage = () => {
   return (
     <div className="flex min-h-screen flex-col lg:flex-row font-display antialiased">
       {/* Left Section: Branding & Illustration */}
-      <div className="relative hidden w-full flex-col justify-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
-        <div className="relative z-10 flex flex-col gap-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-36 w-36 items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="Nexus Logo" className="w-full h-full object-contain" />
+      <div className="relative hidden w-full flex-col justify-center items-center text-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex h-24 w-24 md:h-40 md:w-40 items-center justify-center overflow-hidden drop-shadow-2xl">
+              <img src="/logo.png" alt="Aarogya Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight xl:text-5xl">
-              Nexus Health <br /> Management System
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter xl:text-6xl text-center leading-[0.9]">
+              Aarogya <br className="hidden md:block" /> HMS
             </h1>
           </div>
           <p className="max-w-md text-lg font-medium text-slate-200/90 leading-relaxed">
@@ -78,12 +78,12 @@ const LoginPage = () => {
       {/* Right Section: Login Form */}
       <div className="flex w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark p-6 lg:w-1/2">
         <div className="w-full max-w-md space-y-8 rounded-xl bg-white dark:bg-slate-900 p-8 shadow-xl border border-slate-200 dark:border-slate-800">
-          <div className="text-center lg:text-left">
-            <div className="inline-flex lg:hidden mb-6 h-20 w-20 items-center justify-center overflow-hidden">
+          <div className="text-center">
+            <div className="inline-flex mb-8 h-24 w-24 items-center justify-center overflow-hidden drop-shadow-xl">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Welcome Back</h2>
-            <p className="mt-2 text-slate-500 dark:text-slate-400">Please enter your details to access your dashboard.</p>
+            <h2 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-slate-100 leading-none">Welcome Back</h2>
+            <p className="mt-3 text-slate-500 dark:text-slate-400 font-bold text-sm">Access your healthcare portal dashboard.</p>
           </div>
 
           <form className="space-y-6" onSubmit={handleLogin}>

@@ -49,8 +49,6 @@ const CreatePatient = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const code = `HX-${Math.floor(1000 + Math.random() * 9000)}-${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
-
       const patientData = {
         firstname: data.firstName,
         lastname: data.lastName,
@@ -63,13 +61,11 @@ const CreatePatient = () => {
         city: data.city,
         state: data.state,
         postalcode: data.pincode,
-        signupcode: code,
-        isregistered: false,
         createdbyadminid: profile?.employeeid || 1,
       };
 
-      await patientService.create(patientData);
-      setSignupCode(code);
+      const response = await patientService.create(patientData);
+      setSignupCode(response.signup_code);
       setSuccess(true);
       reset();
     } catch (err) {

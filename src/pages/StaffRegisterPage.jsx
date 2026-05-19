@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -129,18 +130,18 @@ const StaffRegisterPage = () => {
   return (
     <div className="flex min-h-screen flex-col lg:flex-row font-display antialiased">
       {/* Left Panel */}
-      <div className="relative hidden w-full flex-col justify-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
-        <div className="relative z-10 flex flex-col gap-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <span className="material-symbols-outlined text-4xl">badge</span>
+      <div className="relative hidden w-full flex-col justify-center items-center text-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex h-24 w-24 md:h-32 md:w-32 items-center justify-center rounded-3xl bg-white/10 backdrop-blur-sm border border-white/20 shadow-2xl overflow-hidden p-4">
+              <img src="/logo.png" alt="Aarogya Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight xl:text-5xl">
+            <h1 className="text-4xl font-black tracking-tighter xl:text-6xl leading-none">
               Staff Portal<br />Registration
             </h1>
           </div>
           <p className="max-w-md text-lg font-medium text-slate-200/90 leading-relaxed">
-            Welcome to City Hospital. Use your official **Employee ID** provided by your administrator to create your staff portal account.
+            Welcome to Aarogya HMS. Use your official **Employee ID** provided by your administrator to create your staff portal account.
           </p>
           <div className="mt-8 space-y-4 max-w-sm">
             <p className="text-xs font-bold uppercase tracking-widest text-blue-300">How it works</p>

@@ -289,7 +289,7 @@ const PatientBills = () => {
                      </div>
                      <div className="p-4 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/20">
                         <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Due from You</p>
-                        <p className="text-lg font-black text-primary">₹{(parseFloat(selectedBill.totalamount) - parseFloat(selectedBill.insurancecovered || 0)).toLocaleString()}</p>
+                        <p className="text-lg font-black text-primary">₹{(parseFloat(selectedBill.totalamount) - parseFloat(selectedBill.insurancecovered || 0) - parseFloat(selectedBill.discount || 0)).toLocaleString()}</p>
                      </div>
                   </div>
 
@@ -334,7 +334,7 @@ const PatientBills = () => {
                     <div className="w-full space-y-6">
                        <div className="text-center">
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Paying Amount</p>
-                          <h4 className="text-4xl font-black text-slate-900 dark:text-slate-50 tracking-tighter">₹{(parseFloat(selectedBill.totalamount) - parseFloat(selectedBill.insurancecovered || 0)).toLocaleString()}</h4>
+                          <h4 className="text-4xl font-black text-slate-900 dark:text-slate-50 tracking-tighter">₹{(parseFloat(selectedBill.totalamount) - parseFloat(selectedBill.insurancecovered || 0) - parseFloat(selectedBill.discount || 0)).toLocaleString()}</h4>
                        </div>
 
                        <div className="space-y-4">

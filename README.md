@@ -83,6 +83,20 @@ No dropped balls. No spreadsheets. No whiteboards.
 
 ---
 
+## 📸 Screenshots
+
+*(Add your screenshots of all pages here)*
+<!-- Example: ![Dashboard Screenshot](./path/to/screenshot.png) -->
+
+---
+
+## 📊 Relational Model
+
+*(Add your relational model diagram here)*
+<!-- Example: ![Relational Model](./path/to/model.png) -->
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend

@@ -91,7 +91,7 @@ router.post('/', async (req, res) => {
       firstname, lastname, dateofbirth, gender, phonenumber, emergencycontact,
       bloodgroup, height, weight, addressline1, addressline2, city, state, postalcode, country, createdbyadminid
     } = req.body;
-    
+
     // Check if we have minimal required fields for the function
     if (!firstname || !lastname || !dateofbirth || !phonenumber || !emergencycontact || !city || !state) {
       // Fallback for simple inserts if frontend is not sending full profile initially
@@ -103,15 +103,18 @@ router.post('/', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT * FROM fn_register_patient($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`, 
+      `SELECT * FROM fn_register_patient($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
-        firstname, lastname, dateofbirth, gender, phonenumber, emergencycontact, 
-        bloodgroup, height || null, weight || null, addressline1 || '', addressline2 || '', 
+        firstname, lastname, dateofbirth, gender, phonenumber, emergencycontact,
+        bloodgroup, height || null, weight || null, addressline1 || '', addressline2 || '',
         city, state, postalcode || '', country || 'India', createdbyadminid || 1
       ]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Patient Registration Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.put('/:id', async (req, res) => {
@@ -147,8 +150,25 @@ router.get('/verify-code/:code', async (req, res) => {
 // --- ASSESSMENTS ---
 router.get('/assessments/all', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM patientassessment ORDER BY assessedon DESC');
-    res.json(result.rows);
+    const result = await query(`
+      SELECT 
+        pa.*,
+        p.firstname as patient_firstname, p.lastname as patient_lastname,
+        e.firstname as nurse_firstname, e.lastname as nurse_lastname
+      FROM patientassessment pa
+      JOIN patient p ON pa.patientid = p.patientid
+      JOIN employee e ON pa.nurseemployeeid = e.employeeid
+      ORDER BY pa.assessedon DESC
+    `);
+
+    // Map to nested structure for frontend
+    const mapped = result.rows.map(row => ({
+      ...row,
+      patient: { firstname: row.patient_firstname, lastname: row.patient_lastname },
+      employee: { firstname: row.nurse_firstname, lastname: row.nurse_lastname }
+    }));
+
+    res.json(mapped);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -174,8 +194,8 @@ router.get('/assessments/pending', async (req, res) => {
 
 router.post('/assessments', async (req, res) => {
   try {
-    const { 
-      patientid, nurseemployeeid, symptoms, condition, 
+    const {
+      patientid, nurseemployeeid, symptoms, condition,
       temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes,
       assignedDeptID, urgency, caseSummary
     } = req.body;
@@ -184,14 +204,14 @@ router.post('/assessments', async (req, res) => {
       const result = await query(
         `SELECT * FROM fn_create_case_request($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
-          patientid, nurseemployeeid, symptoms, condition, 
+          patientid, nurseemployeeid, symptoms, condition,
           temperature, systolicbp, diastolicbp, pulserate, oxygenlevel, bloodsugar, notes,
           assignedDeptID, urgency || 'Routine', caseSummary || symptoms
         ]
       );
-      
-      res.status(201).json({ 
-        assessment: { assessmentid: result.rows[0].assessment_id }, 
+
+      res.status(201).json({
+        assessment: { assessmentid: result.rows[0].assessment_id },
         caseRequest: { caserequestid: result.rows[0].case_request_id },
         message: result.rows[0].message
       });
@@ -205,8 +225,9 @@ router.post('/assessments', async (req, res) => {
       );
       res.status(201).json({ assessment: assessmentResult.rows[0] });
     }
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
+  } catch (err) {
+    console.error('Assessment Creation Error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -224,6 +245,7 @@ router.get('/feedback/staff-to-rate/:patientId', async (req, res) => {
       LEFT JOIN doctorprofile dp ON doc.employeeid = dp.employeeid
       LEFT JOIN employee nur ON cr.nurseemployeeid = nur.employeeid
       WHERE cr.patientid = $1
+        AND cr.status = 'Resolved'
         AND (cr.doctoremployeeid IS NOT NULL OR cr.nurseemployeeid IS NOT NULL)
       ORDER BY cr.createdon DESC
     `, [req.params.patientId]);
@@ -267,9 +289,9 @@ router.post('/feedback', async (req, res) => {
       [patientid, employeeid, caserequestid, rating, comment || '']
     );
     res.status(201).json(result.rows[0]);
-  } catch (err) { 
+  } catch (err) {
     console.error('Feedback error:', err);
-    res.status(500).json({ error: err.message }); 
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -391,10 +413,10 @@ router.get('/portal/cases/:id', async (req, res) => {
         department: { name: row.department_name },
         doctor: row.doctor_firstname
           ? {
-              firstname: row.doctor_firstname,
-              lastname: row.doctor_lastname,
-              specialization: row.doctor_specialization,
-            }
+            firstname: row.doctor_firstname,
+            lastname: row.doctor_lastname,
+            specialization: row.doctor_specialization,
+          }
           : null,
         diagnosis: toEmptyArrayIfNull(diagnosisByCaseId[row.caserequestid]).sort(
           (a, b) => new Date(b.diagnosedon ?? 0) - new Date(a.diagnosedon ?? 0)

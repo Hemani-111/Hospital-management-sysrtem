@@ -292,12 +292,12 @@ router.patch('/cases/:id/status', async (req, res) => {
     // Use Database Function for Case Acceptance
     if (status === 'Accepted' && doctoremployeeid) {
       const result = await query('SELECT * FROM fn_accept_reject_case($1, $2, $3)', [caseId, doctoremployeeid, 'Accept']);
-      return res.json({ caserequestid: caseId, status: 'Accepted', message: result.rows[0].message });
+      return res.json({ caserequestid: caseId, status: 'Accepted', message: result.rows[0].out_message });
     } else if (status === 'Open' && remarks && remarks.includes('Reject')) {
       const reason = remarks.replace('Rejected: ', '') || 'No reason provided';
       if (doctoremployeeid) {
         const result = await query('SELECT * FROM fn_accept_reject_case($1, $2, $3, $4)', [caseId, doctoremployeeid, 'Reject', reason]);
-        return res.json({ caserequestid: caseId, status: 'Open', message: result.rows[0].message });
+        return res.json({ caserequestid: caseId, status: 'Open', message: result.rows[0].out_message });
       }
     }
 
@@ -324,7 +324,10 @@ router.patch('/cases/:id/status', async (req, res) => {
     if (!result.rows[0]) return res.status(404).json({ message: 'Case not found' });
 
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Case Status Update Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/cases/diagnosis', async (req, res) => {

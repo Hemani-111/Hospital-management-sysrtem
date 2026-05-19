@@ -60,7 +60,8 @@ BEGIN
         NEW.RoomCharges     +
         NEW.LabCharges      +
         NEW.MedicineCharges +
-        NEW.OtherCharges;
+        NEW.OtherCharges    -
+        NEW.Discount;        -- ✅ added Discount
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -115,6 +116,8 @@ FOR EACH ROW
 EXECUTE FUNCTION set_resulted_time();
 
 
+
+/*
 -- ============================================================
 -- TRIGGER 6: Notify on Emergency case creation
 -- ============================================================
@@ -151,7 +154,7 @@ BEGIN
         '💬 New Patient Feedback',
         'A patient has submitted a new rating and comment.',
         'feedback'
-    );
+      );
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -161,3 +164,4 @@ CREATE TRIGGER trg_notify_feedback
 AFTER INSERT ON Feedback
 FOR EACH ROW
 EXECUTE FUNCTION notify_new_feedback();
+*/

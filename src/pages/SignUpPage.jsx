@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -147,14 +148,14 @@ const SignUpPage = () => {
     <div className="flex min-h-screen flex-col lg:flex-row font-display antialiased">
 
       {/* Left Panel: Branding */}
-      <div className="relative hidden w-full flex-col justify-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
-        <div className="relative z-10 flex flex-col gap-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-36 w-36 items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="Nexus Logo" className="w-full h-full object-contain" />
+      <div className="relative hidden w-full flex-col justify-center items-center text-center medical-pattern lg:flex lg:w-1/2 p-12 xl:p-24 text-white">
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex h-24 w-24 md:h-40 md:w-40 items-center justify-center overflow-hidden drop-shadow-2xl">
+              <img src="/logo.png" alt="Aarogya Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight xl:text-5xl">
-              Nexus Health <br /> Management System
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter xl:text-6xl text-center leading-[0.9]">
+              Aarogya <br className="hidden md:block" /> HMS
             </h1>
           </div>
           <p className="max-w-md text-lg font-medium text-slate-200/90 leading-relaxed">
@@ -192,13 +193,11 @@ const SignUpPage = () => {
         <div className="w-full max-w-md">
 
           {/* Mobile logo */}
-          <div className="flex justify-center mb-8 lg:hidden">
-            <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-              </div>
-              <span className="text-xl font-black text-slate-900 dark:text-white">Nexus Health</span>
+          <div className="flex flex-col items-center justify-center mb-8 lg:hidden">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden drop-shadow-xl mb-3">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
+            <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">Aarogya HMS</span>
           </div>
 
           <div className="rounded-xl bg-white dark:bg-slate-900 p-8 shadow-xl border border-slate-200 dark:border-slate-800 space-y-6">

@@ -84,29 +84,24 @@ BEGIN
     
     -- ================================
     -- VALIDATION 5: Phone number
-    -- Must be exactly 10 digits
+    -- Strip non-digits and check if exactly 10 digits
     -- ================================
+    p_phone_number := regexp_replace(p_phone_number, '\D', '', 'g');
+    
     IF p_phone_number IS NULL OR p_phone_number = '' THEN
         RAISE EXCEPTION 'Phone number cannot be empty';
     END IF;
 
-    IF p_phone_number !~ '^\d{10}$' THEN
-        RAISE EXCEPTION 'Phone number must be exactly 10 digits, got: %', 
-            p_phone_number;
+    IF length(p_phone_number) != 10 THEN
+        RAISE EXCEPTION 'Phone number must be exactly 10 digits';
     END IF;
 
     -- ================================
     -- VALIDATION 6: Emergency contact
-    -- Must be different from phone number
-    -- Must be exactly 10 digits
+    -- Must not be empty and different from phone number
     -- ================================
-    IF p_emergency_contact IS NULL OR p_emergency_contact = '' THEN
+    IF p_emergency_contact IS NULL OR TRIM(p_emergency_contact) = '' THEN
         RAISE EXCEPTION 'Emergency contact cannot be empty';
-    END IF;
-
-    IF p_emergency_contact !~ '^\d{10}$' THEN
-        RAISE EXCEPTION 'Emergency contact must be exactly 10 digits, got: %',
-            p_emergency_contact;
     END IF;
 
     IF p_phone_number = p_emergency_contact THEN
@@ -139,7 +134,7 @@ BEGIN
     -- ================================
     -- GENERATE UNIQUE SIGNUP CODE
     -- ================================
-    SELECT NEXTVAL('patient_patientid_seq') INTO v_seq_val;
+    SELECT NEXTVAL(pg_get_serial_sequence('patient', 'patientid')) INTO v_seq_val;
 
     v_signup_code := 'PAT' || TO_CHAR(NOW(), 'YYYY') ||
                      LPAD(v_seq_val::TEXT, 4, '0');
@@ -148,6 +143,7 @@ BEGIN
     -- INSERT PATIENT
     -- ================================
     INSERT INTO Patient (
+        PatientID,
         SignupCode,
         IsRegistered,
         FirstName,
@@ -168,6 +164,7 @@ BEGIN
         CreatedByAdminID,
         CreatedOn
     ) VALUES (
+        v_seq_val,
         v_signup_code,
         FALSE,
         TRIM(p_first_name),
@@ -331,8 +328,12 @@ BEGIN
     END IF;
 
     -- ================================
-    -- VALIDATION 8: Vitals range check
+    -- VALIDATION 8: Vitals range check (Auto-convert Fahrenheit if > 60)
     -- ================================
+    IF p_temperature > 60 THEN
+        p_temperature := ROUND(((p_temperature - 32) * 5 / 9)::NUMERIC, 1);
+    END IF;
+
     IF p_temperature IS NOT NULL AND (p_temperature < 30 OR p_temperature > 45) THEN
         RAISE EXCEPTION 'Temperature % is out of valid range (30-45°C)', p_temperature;
     END IF;
@@ -444,6 +445,8 @@ EXCEPTION
 END;
 $$;
 
+DROP FUNCTION IF EXISTS fn_accept_reject_case(INT, INT, VARCHAR, TEXT);
+
 CREATE OR REPLACE FUNCTION fn_accept_reject_case(
     p_case_request_id   INT,
     p_doctor_employee_id INT,
@@ -451,9 +454,9 @@ CREATE OR REPLACE FUNCTION fn_accept_reject_case(
     p_rejection_reason  TEXT DEFAULT NULL
 )
 RETURNS TABLE (
-    case_request_id INT,
-    status          TEXT,
-    message         TEXT
+    out_case_request_id INT,
+    out_status          TEXT,
+    out_message         TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -580,8 +583,7 @@ BEGIN
         UPDATE CaseRequest
         SET
             DoctorEmployeeID = p_doctor_employee_id,
-            Status           = 'Accepted',
-            ModifiedOn       = NOW()
+            Status           = 'Accepted'
         WHERE CaseRequestID = p_case_request_id;
 
         RETURN QUERY
@@ -601,8 +603,7 @@ BEGIN
             DoctorEmployeeID = NULL,
             Status           = 'Open',  -- back to Open for other doctors
             CaseSummary      = CaseSummary || ' | Rejected by Dr. ' || 
-                               v_doctor_name || ': ' || p_rejection_reason,
-            ModifiedOn       = NOW()
+                               v_doctor_name || ': ' || p_rejection_reason
         WHERE CaseRequestID = p_case_request_id;
 
         RETURN QUERY
@@ -746,6 +747,90 @@ $$;
 -- ==========================================-- ==========================================
 -- BILLING AGGREGATION ENGINE
 -- ==========================================
+-- CREATE OR REPLACE FUNCTION fn_generate_bill(p_case_request_id INT)
+-- RETURNS TABLE (
+--     bill_id            INT,
+--     total_amount       DECIMAL,
+--     insurance_covered  DECIMAL
+-- )
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- AS $$
+-- DECLARE
+--     v_case_exists        BOOLEAN;
+--     v_case_status        case_status;
+--     v_patient_id         INT;
+--     v_consultation_fee   DECIMAL := 500.00;
+--     v_lab_charges        DECIMAL := 0;
+--     v_room_charges       DECIMAL := 0;
+--     v_rx_count           INT := 0;
+--     v_medicine_charges   DECIMAL := 0;
+--     v_total_amount       DECIMAL := 0;
+--     v_insurance_covered  DECIMAL := 0;
+--     v_final_amount       DECIMAL := 0;
+--     v_patient_ins_id     INT := NULL;
+--     v_coverage_percent   DECIMAL := 0;
+--     -- temporary vars for room tracking
+--     v_assessed_on        TIMESTAMP;
+--     v_room_price         DECIMAL;
+--     v_days_stayed        INT;
+-- BEGIN
+--     SELECT EXISTS(SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id) INTO v_case_exists;
+--     IF NOT v_case_exists THEN
+--         RAISE EXCEPTION 'Case request % does not exist', p_case_request_id;
+--     END IF;
+
+--     SELECT PatientID, Status INTO v_patient_id, v_case_status FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
+    
+--     -- Lab charges
+--     SELECT COALESCE(SUM(lt.Price), 0) INTO v_lab_charges
+--     FROM LabReport lr
+--     JOIN LabTest lt ON lr.LabTestID = lt.LabTestID
+--     WHERE lr.CaseRequestID = p_case_request_id;
+
+--     -- Room charges
+--     SELECT cr.AdmittedOn, r.PricePerNight INTO v_assessed_on, v_room_price
+--     FROM CaseRequest cr
+--     JOIN Room r ON cr.RoomID = r.RoomID
+--     WHERE cr.CaseRequestID = p_case_request_id;
+
+--     IF v_assessed_on IS NOT NULL THEN
+--         v_days_stayed := GREATEST(1, CEIL(EXTRACT(EPOCH FROM (NOW() - v_assessed_on)) / 86400));
+--         v_room_charges := v_days_stayed * v_room_price;
+--     END IF;
+
+--     -- Medicine charges
+--     SELECT COUNT(*) INTO v_rx_count FROM Prescription WHERE CaseRequestID = p_case_request_id;
+--     v_medicine_charges := v_rx_count * 200.00;
+
+--     -- Base calculation
+--     v_total_amount := v_consultation_fee + v_lab_charges + v_room_charges + v_medicine_charges;
+
+--     -- Dynamic Insurance lookup (uses patient's actual CoveragePercent)
+--     SELECT PatientInsuranceID, CoveragePercent
+--     INTO v_patient_ins_id, v_coverage_percent
+--     FROM PatientInsurance
+--     WHERE PatientID = v_patient_id AND Status = 'Active'
+--     LIMIT 1;
+
+--     IF v_patient_ins_id IS NOT NULL THEN
+--         v_insurance_covered := v_total_amount * (v_coverage_percent / 100.0);
+--     ELSE
+--         v_insurance_covered := 0;
+--     END IF;
+
+--     v_final_amount := v_total_amount - v_insurance_covered;
+
+--     -- Insert safely
+--     INSERT INTO bill (
+--         CaseRequestID, PatientInsuranceID, ConsultationFee, RoomCharges, LabCharges, MedicineCharges, OtherCharges, Discount, InsuranceCovered, TotalAmount, PaymentStatus
+--     ) VALUES (
+--         p_case_request_id, v_patient_ins_id, v_consultation_fee, v_room_charges, v_lab_charges, v_medicine_charges, 0, 0, v_insurance_covered, v_total_amount, 'Pending'
+--     ) RETURNING BillID INTO bill_id;
+
+--     RETURN QUERY SELECT bill_id, v_final_amount, v_insurance_covered;
+-- END;
+-- $$;
 CREATE OR REPLACE FUNCTION fn_generate_bill(p_case_request_id INT)
 RETURNS TABLE (
     bill_id            INT,
@@ -769,47 +854,77 @@ DECLARE
     v_final_amount       DECIMAL := 0;
     v_patient_ins_id     INT := NULL;
     v_coverage_percent   DECIMAL := 0;
-    -- temporary vars for room tracking
     v_assessed_on        TIMESTAMP;
     v_room_price         DECIMAL;
     v_days_stayed        INT;
+    v_bill_id            INT;
 BEGIN
-    SELECT EXISTS(SELECT 1 FROM CaseRequest WHERE CaseRequestID = p_case_request_id) INTO v_case_exists;
+    -- VALIDATION 1: Case exists
+    SELECT EXISTS(
+        SELECT 1 FROM CaseRequest 
+        WHERE CaseRequestID = p_case_request_id
+    ) INTO v_case_exists;
     IF NOT v_case_exists THEN
         RAISE EXCEPTION 'Case request % does not exist', p_case_request_id;
     END IF;
 
-    SELECT PatientID, Status INTO v_patient_id, v_case_status FROM CaseRequest WHERE CaseRequestID = p_case_request_id;
-    
-    -- Lab charges
+    SELECT PatientID, Status 
+    INTO v_patient_id, v_case_status 
+    FROM CaseRequest 
+    WHERE CaseRequestID = p_case_request_id;
+
+    -- ✅ ADDED: Case must be Resolved
+    IF v_case_status != 'Resolved' THEN
+        RAISE EXCEPTION 'Bill can only be generated for Resolved cases. Current status: %', 
+            v_case_status;
+    END IF;
+
+    -- ✅ ADDED: Bill not already generated
+    IF EXISTS (
+        SELECT 1 FROM Bill 
+        WHERE CaseRequestID = p_case_request_id
+    ) THEN
+        RAISE EXCEPTION 'Bill already generated for case %', 
+            p_case_request_id;
+    END IF;
+
+    -- Lab charges (✅ only unbilled reports)
     SELECT COALESCE(SUM(lt.Price), 0) INTO v_lab_charges
     FROM LabReport lr
     JOIN LabTest lt ON lr.LabTestID = lt.LabTestID
-    WHERE lr.CaseRequestID = p_case_request_id;
+    WHERE lr.CaseRequestID = p_case_request_id
+    AND lr.IsBilled = FALSE;  -- ✅ added filter
 
     -- Room charges
-    SELECT cr.AdmittedOn, r.PricePerNight INTO v_assessed_on, v_room_price
+    SELECT cr.AdmittedOn, r.PricePerNight 
+    INTO v_assessed_on, v_room_price
     FROM CaseRequest cr
     JOIN Room r ON cr.RoomID = r.RoomID
     WHERE cr.CaseRequestID = p_case_request_id;
 
     IF v_assessed_on IS NOT NULL THEN
-        v_days_stayed := GREATEST(1, CEIL(EXTRACT(EPOCH FROM (NOW() - v_assessed_on)) / 86400));
+        v_days_stayed := GREATEST(
+            1, CEIL(EXTRACT(EPOCH FROM (NOW() - v_assessed_on)) / 86400)
+        );
         v_room_charges := v_days_stayed * v_room_price;
     END IF;
 
     -- Medicine charges
-    SELECT COUNT(*) INTO v_rx_count FROM Prescription WHERE CaseRequestID = p_case_request_id;
+    SELECT COUNT(*) INTO v_rx_count 
+    FROM Prescription 
+    WHERE CaseRequestID = p_case_request_id;
     v_medicine_charges := v_rx_count * 200.00;
 
-    -- Base calculation
-    v_total_amount := v_consultation_fee + v_lab_charges + v_room_charges + v_medicine_charges;
+    -- Base total
+    v_total_amount := v_consultation_fee + v_lab_charges 
+                    + v_room_charges + v_medicine_charges;
 
-    -- Dynamic Insurance lookup (uses patient's actual CoveragePercent)
+    -- Insurance lookup
     SELECT PatientInsuranceID, CoveragePercent
     INTO v_patient_ins_id, v_coverage_percent
     FROM PatientInsurance
-    WHERE PatientID = v_patient_id AND Status = 'Active'
+    WHERE PatientID = v_patient_id 
+    AND Status = 'Active'
     LIMIT 1;
 
     IF v_patient_ins_id IS NOT NULL THEN
@@ -820,17 +935,30 @@ BEGIN
 
     v_final_amount := v_total_amount - v_insurance_covered;
 
-    -- Insert safely
-    INSERT INTO bill (
-        CaseRequestID, PatientInsuranceID, ConsultationFee, RoomCharges, LabCharges, MedicineCharges, OtherCharges, Discount, InsuranceCovered, TotalAmount, PaymentStatus
+    -- Insert Bill
+    INSERT INTO Bill (
+        CaseRequestID, PatientInsuranceID,
+        ConsultationFee, RoomCharges, LabCharges, MedicineCharges,
+        OtherCharges, Discount, InsuranceCovered, TotalAmount, PaymentStatus
     ) VALUES (
-        p_case_request_id, v_patient_ins_id, v_consultation_fee, v_room_charges, v_lab_charges, v_medicine_charges, 0, 0, v_insurance_covered, v_total_amount, 'Pending'
-    ) RETURNING BillID INTO bill_id;
+        p_case_request_id, v_patient_ins_id,
+        v_consultation_fee, v_room_charges, v_lab_charges, v_medicine_charges,
+        0, 0, v_insurance_covered, v_total_amount, 'Pending'
+    ) RETURNING BillID INTO v_bill_id;
 
-    RETURN QUERY SELECT bill_id, v_final_amount, v_insurance_covered;
+    -- ✅ ADDED: Mark lab reports as billed
+    UPDATE LabReport 
+    SET IsBilled = TRUE
+    WHERE CaseRequestID = p_case_request_id
+    AND IsBilled = FALSE;
+
+    RETURN QUERY SELECT v_bill_id, v_final_amount, v_insurance_covered;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION '%', SQLERRM;
 END;
 $$;
-
 -- ==========================================
 -- TRIGGER: AUTO FREE ROOM UPON RESOLUTION
 -- ==========================================
@@ -1018,3 +1146,4 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN RAISE EXCEPTION '%', SQLERRM;
 END;
 $$;
+

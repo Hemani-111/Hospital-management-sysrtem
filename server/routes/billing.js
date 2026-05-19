@@ -98,7 +98,7 @@ router.put('/:id', async (req, res) => {
   try {
     const updates = Object.keys(req.body).map((k, i) => `${k} = $${i + 1}`).join(', ');
     const vals = [...Object.values(req.body), req.params.id];
-    const result = await query(`UPDATE patient SET ${updates} WHERE patientid = $${vals.length} RETURNING *`, vals);
+    const result = await query(`UPDATE bill SET ${updates} WHERE billid = $${vals.length} RETURNING *`, vals);
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

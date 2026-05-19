@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
 import { caseService } from '../services/caseService';
 import { billingService } from '../services/billingService';
 import { useToastStore } from '../store/toastStore';
+import { useAuthStore } from '../store/authStore';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
 
 const PatientList = () => {
+  const navigate = useNavigate();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [genderFilter, setGenderFilter] = useState('All');
@@ -19,6 +22,7 @@ const PatientList = () => {
 
   const queryClient = useQueryClient();
   const { addToast } = useToastStore();
+  const { session } = useAuthStore();
   const { data: patients, isLoading } = useQuery({
     queryKey: ['patients'],
     queryFn: () => patientService.getAll()
@@ -86,37 +90,39 @@ const PatientList = () => {
 
   return (
     <MainLayout title="Patient List" hidePadding={true}>
-      <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
-        <nav className="flex items-center gap-2 text-sm">
-          <span className="text-slate-400">Admin</span>
-          <span className="material-symbols-outlined text-xs text-slate-400">chevron_right</span>
+      <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between">
+        <nav className="flex items-center gap-2 text-xs md:sm">
+          <span className="text-slate-400 hidden sm:inline">Admin</span>
+          <span className="material-symbols-outlined text-[10px] text-slate-400 hidden sm:inline">chevron_right</span>
           <span className="text-primary font-semibold">Patient List</span>
         </nav>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 border-r border-slate-200 pr-6">
+        <div className="flex items-center gap-3 md:gap-6">
+          <div className="hidden sm:flex items-center gap-4 border-r border-slate-200 dark:border-slate-800 pr-6">
             <button className="text-slate-500 hover:text-primary transition-colors">
               <span className="material-symbols-outlined">help</span>
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-semibold">John Doe</p>
-              <p className="text-xs text-slate-400">System Administrator</p>
+            <div className="text-right hidden xs:block">
+              <p className="text-xs md:sm font-semibold">{session?.user?.user_metadata?.first_name || 'Admin'}</p>
+              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{session?.user?.role || 'Staff'}</p>
             </div>
-            <img alt="Admin Avatar" className="h-10 w-10 rounded-full border border-slate-200 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCym7_1UWp2gDlf-eSz7y0PSwnZvscE1fLo0Eu0TW1H-AMgIQF8nka7rlvvU6suQDYb5QZknHsDrnFMOZwxu7u4f4jhPtrZr5Fpr5NplNsiJ-Y4R0qtLvlllJ1933Jg_RMKO_zaXaW7VtFT1tET_motgshQwwstK-CFHd4EN4c3QxE2QFhYgLcYYzFSIzMeSz_xUCiZwV8J1H3R-EKtcnlg-E-R0HYglrSwn7zje1lnWqehPwHFng3M_pT-7Mls0dc4QXhp5fZBSZU" />
+            <div className="size-8 md:size-10 rounded-full border border-slate-200 dark:border-slate-800 overflow-hidden">
+               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${session?.user?.email}&backgroundColor=e0f2fe`} alt="Avatar" className="w-full h-full object-cover" />
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 p-8 overflow-y-auto bg-background-light print:hidden">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-1 min-w-[300px] gap-3">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-background-light dark:bg-background-dark print:hidden">
+          <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row flex-1 gap-3">
               <div className="relative flex-1">
                 <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400">search</span>
                 <input 
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
-                  placeholder="Search patients by name, ID or phone..." 
+                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm" 
+                  placeholder="Search..." 
                   type="text" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -126,49 +132,50 @@ const PatientList = () => {
                 <select 
                   value={genderFilter}
                   onChange={(e) => setGenderFilter(e.target.value)}
-                  className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none"
+                  className="flex-1 sm:flex-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none"
                 >
-                  <option value="All">Gender: All</option>
+                  <option value="All">All Genders</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>
                 <select 
                   value={bloodFilter}
                   onChange={(e) => setBloodFilter(e.target.value)}
-                  className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none"
+                  className="flex-1 sm:flex-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none"
                 >
-                  <option value="All">Blood Group: All</option>
+                  <option value="All">All Blood</option>
                   <option value="A+">A+</option>
                   <option value="A-">A-</option>
                   <option value="B+">B+</option>
                   <option value="B-">B-</option>
                   <option value="O+">O+</option>
                   <option value="O-">O-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
                 </select>
               </div>
             </div>
-            <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-all">
-              <span className="material-symbols-outlined text-sm">add</span>
-              New Patient
+            <button 
+              onClick={() => navigate('/patients/create')}
+              className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all text-sm shadow-lg shadow-primary/20"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              <span className="whitespace-nowrap">New Patient</span>
             </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <table className="w-full text-left min-w-[1000px]">
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-premium overflow-hidden">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left min-w-[800px] md:min-w-0">
               <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest">
                 <tr>
                   <th className="px-8 py-5">Patient Identity</th>
-                  <th className="px-8 py-5">Demographics</th>
-                  <th className="px-8 py-5">Contact</th>
-                  <th className="px-8 py-5">Life Metrics</th>
+                  <th className="px-8 py-5 hidden sm:table-cell">Demographics</th>
+                  <th className="px-8 py-5 hidden lg:table-cell">Contact</th>
+                  <th className="px-8 py-5 hidden md:table-cell">Life Metrics</th>
                   <th className="px-8 py-5">Case Summary</th>
                   <th className="px-8 py-5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[11px] md:text-sm">
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <tr key={i}>
@@ -190,52 +197,52 @@ const PatientList = () => {
                 ) : (
                   filteredPatients.map((pt) => (
                     <tr key={pt.patientid} className={`transition-all duration-300 cursor-pointer ${selectedPatient?.patientid === pt.patientid ? 'bg-primary/5 dark:bg-primary/10 border-l-4 border-primary' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`} onClick={() => setSelectedPatient(pt)}>
-                      <td className="px-8 py-5">
-                        <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">#PT-{pt.patientid}</p>
-                        <p className={`font-black tracking-tight ${selectedPatient?.patientid === pt.patientid ? 'text-primary' : 'text-slate-900 dark:text-white text-base'}`}>{pt.firstname} {pt.lastname}</p>
+                      <td className="px-4 md:px-8 py-4 md:py-5">
+                        <p className="text-[8px] md:text-[10px] font-black text-slate-400 mb-0.5 md:mb-1 uppercase tracking-widest">#PT-{pt.patientid}</p>
+                        <p className={`font-black tracking-tight ${selectedPatient?.patientid === pt.patientid ? 'text-primary' : 'text-slate-900 dark:text-white text-sm md:text-base'}`}>{pt.firstname} {pt.lastname}</p>
                       </td>
-                      <td className="px-8 py-5">
+                      <td className="px-4 md:px-8 py-4 md:py-5 hidden sm:table-cell">
                          <div className="flex flex-col gap-0.5">
                             <span className="text-slate-600 dark:text-slate-300 font-bold">{pt.dateofbirth ? new Date().getFullYear() - new Date(pt.dateofbirth).getFullYear() : 'N/A'} Years</span>
-                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{pt.gender}</span>
+                            <span className="text-[9px] md:text-[10px] text-slate-400 font-black uppercase tracking-wider">{pt.gender}</span>
                          </div>
                       </td>
-                      <td className="px-8 py-5">
+                      <td className="px-4 md:px-8 py-4 md:py-5 hidden lg:table-cell">
                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm text-slate-300">call</span>
+                            <span className="material-symbols-outlined text-xs md:text-sm text-slate-300">call</span>
                             <span className="text-slate-600 dark:text-slate-300 font-medium">{pt.phonenumber}</span>
                          </div>
                       </td>
-                      <td className="px-8 py-5">
-                        <span className={`px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800`}>
+                      <td className="px-4 md:px-8 py-4 md:py-5 hidden md:table-cell">
+                        <span className={`px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800`}>
                           {pt.bloodgroup || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-8 py-5">
+                      <td className="px-4 md:px-8 py-4 md:py-5">
                         {pt.caserequestid ? (
                           <div className="flex flex-col gap-1">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight w-fit ${pt.isadmitted ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {pt.case_status} {pt.isadmitted ? `• Room ${pt.roomnumber}` : ''}
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-tight w-fit ${pt.isadmitted ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {pt.case_status} {pt.isadmitted ? `• Rm ${pt.roomnumber}` : ''}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-bold">CAS-{pt.caserequestid}</span>
+                            <span className="text-[9px] text-slate-400 font-bold">CAS-{pt.caserequestid}</span>
                           </div>
                         ) : (
                           <span className="text-slate-400 italic font-medium">No Active Case</span>
                         )}
                       </td>
-                      <td className="px-8 py-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-4 md:px-8 py-4 md:py-5 text-center">
+                        <div className="flex items-center justify-center gap-1 md:gap-2">
                           {pt.isadmitted && (
                             <button 
                               onClick={(e) => { e.stopPropagation(); dischargeMutation.mutate(pt.caserequestid); }}
                               disabled={dischargeMutation.isPending}
-                              className="px-4 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200"
+                              className="px-2 md:px-4 py-1.5 md:py-2 bg-rose-500 text-white rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all"
                             >
-                              {dischargeMutation.isPending ? '...' : 'Discharge'}
+                              {dischargeMutation.isPending ? '...' : 'Out'}
                             </button>
                           )}
-                          <button className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedPatient?.patientid === pt.patientid ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-primary hover:bg-primary/5'}`}>
-                            {selectedPatient?.patientid === pt.patientid ? 'Viewing' : 'Inspect'}
+                          <button className={`px-3 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${selectedPatient?.patientid === pt.patientid ? 'bg-primary text-white' : 'text-primary'}`}>
+                            {selectedPatient?.patientid === pt.patientid ? 'View' : 'Inspect'}
                           </button>
                         </div>
                       </td>
@@ -262,11 +269,11 @@ const PatientList = () => {
 
         {/* Right Side Modal Overlay (Slide-out) */}
         {selectedPatient && (
-          <div className="w-[35%] min-w-[350px] bg-white border-l border-slate-200 shadow-2xl flex flex-col z-10 transition-transform duration-300 transform translate-x-0 print:translate-x-0 print:border-none print:shadow-none print:w-full print:fixed print:inset-0 print:z-[1000] print:bg-white print:overflow-visible patient-print-area">
-            <div className="p-6 border-b border-slate-200">
+          <div className="fixed inset-y-0 right-0 w-full md:w-[35%] md:min-w-[400px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col z-[60] md:z-10 transition-all duration-500 transform translate-x-0 print:translate-x-0 print:border-none print:shadow-none print:w-full print:fixed print:inset-0 print:z-[1000] print:bg-white print:overflow-visible">
+            <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center justify-between mb-4 print:mb-8">
-                <h2 className="text-xl font-bold text-slate-900 print:text-3xl print:text-primary">Patient Summary Report</h2>
-                <button className="text-slate-400 hover:text-slate-600 cursor-pointer print:hidden" onClick={() => setSelectedPatient(null)}>
+                <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white print:text-3xl print:text-primary">Patient Summary</h2>
+                <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer print:hidden" onClick={() => setSelectedPatient(null)}>
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>

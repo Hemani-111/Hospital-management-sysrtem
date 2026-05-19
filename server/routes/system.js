@@ -69,4 +69,5 @@ router.get('/search/global', async (req, res) => {
   }
 });
 
+
 export default router;

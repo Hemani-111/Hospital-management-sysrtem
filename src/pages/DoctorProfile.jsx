@@ -4,11 +4,13 @@ import { useAuthStore } from '../store/authStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToastStore } from '../store/toastStore';
 import { employeeService } from '../services/employeeService';
+import LogoutModal from '../components/ui/LogoutModal';
 
 const DoctorProfile = () => {
   const queryClient = useQueryClient();
-  const { session } = useAuthStore();
+  const { session, logout } = useAuthStore();
   const userEmail = session?.user?.email;
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -81,8 +83,14 @@ const DoctorProfile = () => {
             onClick={handleEditClick}
             className="bg-primary text-white px-6 py-2 rounded-xl text-sm font-black flex items-center gap-2 hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
           >
-            <span className="material-symbols-outlined text-sm">edit_square</span>
             Edit Portfolio
+          </button>
+          <button 
+            onClick={() => setIsLogoutModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
+          >
+            <span className="material-symbols-outlined text-sm">logout</span>
+            <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </header>
@@ -108,7 +116,7 @@ const DoctorProfile = () => {
                   <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 leading-none tracking-tighter">{fullName}</h1>
                   <p className="text-primary font-black text-xl tracking-tight">{doctorProfile?.specialization || 'Consultant Specialist'}</p>
                   <p className="text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                     <span className="material-symbols-outlined text-sm text-primary">location_on</span> City Hospital • Dept of {profile?.department?.name || 'Medical Services'}
+                     <span className="material-symbols-outlined text-sm text-primary">location_on</span> Aarogya HMS • Dept of {profile?.department?.name || 'Medical Services'}
                   </p>
                 </div>
 
@@ -227,6 +235,11 @@ const DoctorProfile = () => {
            </form>
         </div>
       )}
+      <LogoutModal 
+         isOpen={isLogoutModalOpen}
+         onConfirm={logout}
+         onCancel={() => setIsLogoutModalOpen(false)}
+      />
     </MainLayout>
   );
 };
