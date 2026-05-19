@@ -4,6 +4,8 @@
 ### *आरोग्य — Complete Wellbeing*
 
 **A full-stack Hospital Management System built for the real world.**  
+*Developed as a comprehensive Database Management Systems (DBMS) course semester project.*  
+
 From triage to discharge. From diagnosis to billing. One platform, zero chaos.
 
 [![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
@@ -29,7 +31,9 @@ When you say "Aarogya," you're not just naming software. You're making a promise
 
 ## 🎬 The "Why": Beyond Just Another Academic Project
 
-Most university DBMS projects are "toy projects"—a simple React frontend hooked up to a database doing basic CRUD operations (like inserting a student record or buying a book from a virtual shop). They rarely reflect the chaos, complexity, and strict integrity requirements of the real world. 
+Aarogya HMS was designed and built from scratch as our **Database Management Systems (DBMS) course semester project**. 
+
+While most university DBMS projects are "toy projects"—a simple React frontend hooked up to a database doing basic CRUD operations (like inserting a student record or buying a book from a virtual shop)—they rarely reflect the chaos, complexity, and strict integrity requirements of the real world. 
 
 We built **Aarogya HMS** to challenge that status quo. Here is the real motivation behind this project:
 
