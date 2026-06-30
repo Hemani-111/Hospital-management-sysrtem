@@ -71,7 +71,7 @@ It's built for three kinds of humans:
 
 ---
 
-## 🚀 Features
+## 🚀 Features:
 
 ### 🏢 Admin Command Center
 - **Live Stats Dashboard** — Real-time revenue, patient inflow, and bed occupancy powered by Recharts
