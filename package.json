@@ -43,13 +43,13 @@
   "main": "eslint.config.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kiran-8287/hospital-management-system.git"
+    "url": "git+https://github.com/Hemani-111/Hospital-management-sysrtem.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Hemani-111 <142401043@smail.iitpkd.ac.in>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/kiran-8287/hospital-management-system/issues"
+    "url": "https://github.com/Hemani-111/Hospital-management-sysrtem/issues"
   },
-  "homepage": "https://github.com/kiran-8287/hospital-management-system#readme"
+  "homepage": "https://github.com/Hemani-111/Hospital-management-sysrtem#readme"
 }
