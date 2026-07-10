@@ -254,7 +254,18 @@ The database entity relationships, schema layout, and table constraints of the A
 | **SQL Functions & Joins** | Automated billing logic and reporting |
 
 ---
+## 👤 My Contribution
 
+### Database & SQL Development
+- Designed and implemented PostgreSQL database structures for the hospital management workflow.
+- Created and optimized SQL queries, joins, and relational mappings for retrieving clinical and administrative data.
+- Developed database-level logic using SQL functions and triggers for:
+  - Automated bill calculation during patient discharge.
+  - Updating room occupancy status automatically.
+  - Maintaining data consistency through constraints and validations.
+- Worked on database schema design, relationships, and integrity rules to support the application's core features.
+
+---
 ## 📁 Project Architecture
 
 Recently refactored into a domain-driven, modular backend — no monoliths here.
